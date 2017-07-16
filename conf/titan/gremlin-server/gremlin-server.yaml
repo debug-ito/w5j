@@ -11,7 +11,7 @@ plugins:
   - aurelius.titan
 scriptEngines: {
   gremlin-groovy: {
-    imports: [java.lang.Math, com.github.debug_ito.event_time.EventTime],
+    imports: [java.lang.Math],
     staticImports: [java.lang.Math.PI],
     scripts: [scripts/index-test.groovy]},
   nashorn: {
