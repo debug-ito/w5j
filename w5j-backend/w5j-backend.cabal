@@ -20,8 +20,14 @@ library
   -- default-extensions:   
   -- other-extensions:     
   -- exposed-modules:      W5J
-  -- other-modules:        
-  build-depends:        base
+  other-modules:        W5J.Type,
+                        W5J.Interval,
+                        W5J.Time
+  build-depends:        base,
+                        text,
+                        time,
+                        unix-time,
+                        intervals
 
 -- executable w5j-backend
 --   default-language:     Haskell2010
