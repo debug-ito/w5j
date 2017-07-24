@@ -23,7 +23,8 @@ library
   other-modules:        W5J.What,
                         W5J.When,
                         W5J.Interval,
-                        W5J.Time
+                        W5J.Time,
+                        W5J.DB.TinkerPop
   build-depends:        base,
                         text,
                         time,
