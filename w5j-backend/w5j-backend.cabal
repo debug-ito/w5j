@@ -20,7 +20,8 @@ library
   -- default-extensions:   
   other-extensions:     OverloadedStrings
   exposed-modules:      W5J.GremlinTest
-  other-modules:        W5J.Type,
+  other-modules:        W5J.What,
+                        W5J.When,
                         W5J.Interval,
                         W5J.Time
   build-depends:        base,
