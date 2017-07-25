@@ -19,6 +19,7 @@ import Database.TinkerPop.Types
   )
 import qualified Database.TinkerPop as TP
 
+import W5J.Time (currentTime)
 import W5J.What (What(..), WhatID)
 
 -- | Make a 'Connection' to the given server and run the given action.
@@ -37,10 +38,13 @@ withConnection = TP.run
 -- | Add a new 'What' vertex into the DB.
 addWhat :: Connection
         -> What
-        -- ^ 'What' vertex to add. 'whatId' field is ignored.
+        -- ^ 'What' vertex to add. 'whatId', 'whatCreatedAt' and
+        -- 'whatUpdatedAt' fields are ignored, and set automatically.
         -> IO (WhatID)
         -- ^ newly created ID for 'whatId' field.
-addWhat conn what = handleResult =<< TP.submit conn gremlin (Just binds)
+addWhat conn what = do
+  cur_time <- currentTime
+  handleResult =<< TP.submit conn gremlin (Just $ binds cur_time)
   where
     gremlin = "g.addV(label, 'what', "
               <> "'title', TITLE, "
@@ -48,13 +52,13 @@ addWhat conn what = handleResult =<< TP.submit conn gremlin (Just binds)
               <> "'tags', TAGS, "
               <> "'created_at', CREATED_AT, "
               <> "'updated_at', UPDATED_AT).id()"
-    binds = HM.fromList
-            [ ("TITLE", toJSON $ whatTitle $ what),
-              ("BODY", toJSON $ whatBody $ what),
-              ("TAGS", toJSON $ whatTags $ what),
-              ("CREATED_AT", toJSON $ dummy_time),
-              ("UPDATED_AT", toJSON $ dummy_time)
-            ]
+    binds _ = HM.fromList
+              [ ("TITLE", toJSON $ whatTitle $ what),
+                ("BODY", toJSON $ whatBody $ what),
+                ("TAGS", toJSON $ whatTags $ what),
+                ("CREATED_AT", toJSON $ dummy_time),
+                ("UPDATED_AT", toJSON $ dummy_time)
+              ]
     dummy_time :: Int
     dummy_time = 1234 -- todo
     handleResult (Left err) = error err -- todo
