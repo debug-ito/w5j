@@ -53,9 +53,10 @@ test-suite spec
   main-is:              Spec.hs
   -- default-extensions:   
   -- other-extensions:     
-  -- other-modules:        W5JSpec
+  other-modules:        W5J.TimeSpec
   build-depends:        base, w5j-backend,
-                        hspec
+                        hspec,
+                        QuickCheck
 
 source-repository head
   type:                 git
