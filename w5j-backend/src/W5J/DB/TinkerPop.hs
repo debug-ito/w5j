@@ -115,6 +115,11 @@ runGBuilder gbuilder = (ret, binding)
     (ret, (_, values)) = State.runState gbuilder (0, [])
     binding = HM.fromList $ zip (map place [0 ..]) $ values
 
+seqGremlin :: [GBuilder Text] -> GBuilder Text
+seqGremlin = fmap seqSentences . sequence
+  where
+    seqSentences = T.intercalate "; "
+
 addVertexSentence :: Text
                   -- ^ vertex label
                   -> Maybe Text
