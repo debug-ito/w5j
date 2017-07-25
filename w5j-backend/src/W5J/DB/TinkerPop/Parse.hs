@@ -6,12 +6,8 @@
 --
 -- 
 module W5J.DB.TinkerPop.Parse
-       ( PropertyValue(..),
-         PropertyOne(..),
-         PropertyMany(..),
-         VertexID,
-         VertexLabel,
-         parseVertex
+       ( AesonWhat(..),
+         AesonWhen(..)
        ) where
 
 import Control.Applicative ((<$>), empty)
@@ -23,6 +19,8 @@ import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import Data.Text (Text)
 
+import W5J.What (What(..))
+import W5J.When (When(..))
 
 -- | The atomic (vertex) property value
 newtype PropertyValue a = PropertyValue { unPropertyValue :: a }
@@ -67,5 +65,17 @@ parseVertex upperParser (Object obj) = do
    Just (Object prop_obj) -> upperParser vid label prop_obj
    _ -> empty
 parseVertex _ _ = empty
+
+-- | Wrapper of 'What' for aeson
+newtype AesonWhat = AesonWhat What
+
+instance FromJSON AesonWhat where
+  parseJSON = undefined -- TODO
+
+-- | Wrapper of 'When' for aeson
+newtype AesonWhen = AesonWhen When
+
+instance FromJSON AesonWhen where
+  parseJSON = undefined -- TODO
 
 
