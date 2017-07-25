@@ -11,12 +11,15 @@ module W5J.DB.TinkerPop
          addWhat
        ) where
 
-import Data.Aeson (ToJSON(toJSON))
+import Control.Monad.Trans.State (State)
+import qualified Control.Monad.Trans.State as State
+import Data.Aeson (ToJSON(toJSON), Value)
 import qualified Data.HashMap.Strict as HM
 import Data.Monoid ((<>), mconcat)
-import Data.Text (pack)
+import Data.Text (pack, Text)
+import qualified Data.Text as T
 import Database.TinkerPop.Types
-  ( Connection
+  ( Connection, Binding
   )
 import qualified Database.TinkerPop as TP
 
@@ -112,3 +115,45 @@ addWhen conn wh = handleResult =<< TP.submit conn gremlin (Just binds)
     handleResult (Right ret) = do
       print ret
       return 0 -- TODO
+
+-- addWhenじゃダメか。複文をたたきつけないといけない。
+
+type PlaceHolderIndex = Int
+
+type GBuilder = State (PlaceHolderIndex, [Value])
+
+newPlaceHolder :: Value -> GBuilder PlaceHolderIndex
+newPlaceHolder val = do
+  (next_index, values) <- State.get
+  State.put (succ next_index, values ++ [val])
+  return next_index
+
+place :: PlaceHolderIndex -> Text
+place index = "v" <> (pack $ show index)
+
+addVertexSentence :: Text
+                  -- ^ vertex label
+                  -> Maybe Text
+                  -- ^ variable name to receive the result
+                  -> [(Text, Value)]
+                  -- ^ properties
+                  -> GBuilder Text
+                  -- ^ gremlin script
+addVertexSentence label mreceiver props = gremlin
+  where
+    gremlin = case mreceiver of
+      Nothing -> gremlin_addV
+      Just receiver -> do
+        add_sentence <- gremlin_addV
+        return (receiver <> " = " <> add_sentence)
+    gremlin_addV = do
+      var_label <- fmap place $ newPlaceHolder $ toJSON $ label
+      props_gremlin <- fmap (mconcat . map pairToGremlin) $ mapM toVarNamePair props
+      return ("graph.addVertex(label, " <> var_label <> props_gremlin <> ")")
+    toVarNamePair (prop_name, prop_val) = do
+      var_name <- fmap place $ newPlaceHolder prop_val
+      return (prop_name, var_name)
+    pairToGremlin (prop_name, var_name) =
+      ", '" <> prop_name <> "', " <> var_name
+
+
