@@ -33,7 +33,7 @@ data What =
     -- topic is an event, it is the interval during which the event is
     -- being held.
     whatBody :: !Text,
-    whatTags :: ![Tag],
+    whatTags :: ![Tag], -- TODO: should we use Set?
     whatCreatedAt :: !TimeInstant,
     whatUpdatedAt :: !TimeInstant
   }

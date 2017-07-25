@@ -13,10 +13,10 @@ mainWithConn :: Connection -> IO ()
 mainWithConn conn = print =<< addWhat conn what
   where
     what = What { whatId = 0,
-                  whatTitle = "what title",
+                  whatTitle = "what title hogehoge",
                   whatTime = Nothing,
-                  whatBody = "what body",
-                  whatTags = ["foo", "bar", "buzz"],
+                  whatBody = "what body foobar",
+                  whatTags = ["foo", "bar", "buzz", "foo"],
                   whatCreatedAt = zeroTime,
                   whatUpdatedAt = zeroTime
                 }

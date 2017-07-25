@@ -13,7 +13,8 @@ module W5J.DB.TinkerPop
 
 import Data.Aeson (ToJSON(toJSON))
 import qualified Data.HashMap.Strict as HM
-import Data.Monoid ((<>))
+import Data.Monoid ((<>), mconcat)
+import Data.Text (pack)
 import Database.TinkerPop.Types
   ( Connection
   )
@@ -49,16 +50,23 @@ addWhat conn what = do
     gremlin = "g.addV(label, 'what', "
               <> "'title', TITLE, "
               <> "'body', BODY, "
-              <> "'tags', TAGS, "
+              <> gremlin_tags
               <> "'created_at', CREATED_AT, "
               <> "'updated_at', UPDATED_AT).id()"
+    indices :: [Int]
+    indices = [0 ..]
+    indexed_tags = zip indices $ whatTags what
+    tagsVar i = "TAGS" <> (pack $ show i)
+    gremlin_tags = mconcat $ map (\(i, _) -> "'tags', " <> tagsVar i <> ", ") $ indexed_tags
     binds _ = HM.fromList
-              [ ("TITLE", toJSON $ whatTitle $ what),
-                ("BODY", toJSON $ whatBody $ what),
-                ("TAGS", toJSON $ whatTags $ what),
-                ("CREATED_AT", toJSON $ dummy_time),
-                ("UPDATED_AT", toJSON $ dummy_time)
-              ]
+              ( [ ("TITLE", toJSON $ whatTitle $ what),
+                  ("BODY", toJSON $ whatBody $ what),
+                  ("CREATED_AT", toJSON $ dummy_time),
+                  ("UPDATED_AT", toJSON $ dummy_time)
+                ]
+                ++ binds_tags
+              )
+    binds_tags = map (\(i, tag) -> (tagsVar i, toJSON tag)) indexed_tags
     dummy_time :: Int
     dummy_time = 1234 -- todo
     handleResult (Left err) = error err -- todo
