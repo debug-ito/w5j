@@ -66,7 +66,7 @@ addWhat :: Connection
 addWhat conn what = do
   cur_time <- currentTime
   let (gremlin, binds) = runGBuilder $ addWhatSentences $ setCurrentTime cur_time what
-  parseResult =<< (toGremlinError $ TP.submit conn gremlin (Just binds))
+  parseResult =<< toGremlinError =<< TP.submit conn gremlin (Just binds)
   where
     setCurrentTime t w = w { whatCreatedAt = t,
                              whatUpdatedAt = t

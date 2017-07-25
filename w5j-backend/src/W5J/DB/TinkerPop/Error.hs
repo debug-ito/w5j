@@ -27,11 +27,9 @@ data DBError
 
 instance Exception DBError
 
-toGremlinError :: IO (Either String a) -> IO a
-toGremlinError action = throwLeft =<< action
-  where
-    throwLeft (Left err) = throwIO $ GremlinError err
-    throwLeft (Right r) = return r
+toGremlinError :: Either String a -> IO a
+toGremlinError (Left err) = throwIO $ GremlinError err
+toGremlinError (Right r) = return r
 
 parseError :: String -> IO a
 parseError err = throwIO $ ParseError err
