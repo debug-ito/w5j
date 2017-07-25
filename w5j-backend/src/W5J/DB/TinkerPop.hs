@@ -36,6 +36,19 @@ withConnection = TP.run
 
 -- How to configure transactions in the remote Gremlin Server?
 
+-- when I connect to the remote server from gremlin.sh, it seems
+-- transactions are not enabled. Every operation seems immediately
+-- commited.
+
+-- https://groups.google.com/forum/#!topic/gremlin-users/S4T9yOfHlV4
+-- http://tinkerpop.apache.org/docs/3.0.1-incubating/#sessions
+-- どうやらデフォルトで"sessionless"で動作するらしい。要はauto commitモード。
+--
+-- sessionを使うためにはリクエストの"processor"を"session"にして、
+-- "eval"オペレーションの"session"フィールドにUUIDを詰めないといけない。
+-- この機能はgremlin-haskellにはない。。
+
+
 -- | Add a new 'What' vertex into the DB.
 addWhat :: Connection
         -> What
