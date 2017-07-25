@@ -1,21 +1,35 @@
 
 hook = [
   onStartUp : { ctx ->
-    graph.tx().rollback()  //Never create new indexes while a transaction is active
-    mgmt = graph.openManagement()
-    if(mgmt.getPropertyKey('when_from') != null) return;
-    
-    when_from = mgmt.makePropertyKey('when_from').dataType(Instant.class).make()
-    mgmt.buildIndex('whenFromIndex', Vertex.class).addKey(when_from).buildMixedIndex("search")
-    mgmt.commit()
-    
-    //Wait for the index to become available
-    mgmt.awaitGraphIndexStatus(graph, 'whenFromIndex').call()
-    
-    // //Reindex the existing data
-    // mgmt = graph.openManagement()
-    // mgmt.updateIndex(mgmt.getGraphIndex("whenFromIndex"), SchemaAction.REINDEX).get()
-    // mgmt.commit()
+    makeIndexFor = { prop_name, data_class -> 
+      graph.tx().rollback();
+      mgmt = graph.openManagement();
+      if(mgmt.getPropertyKey(prop_name) != null) return;
+
+      index_name = prop_name + "_index";
+      prop_key = mgmt.makePropertyKey(prop_name).dataType(data_class).make()
+      mgmt.buildIndex(index_name, Vertex.class).addKey(prop_key).buildMixedIndex("search")
+      mgmt.commit()
+      
+      //Wait for the index to become available
+      mgmt.awaitGraphIndexStatus(graph, index_name).call()
+
+      // //Reindex the existing data
+      // mgmt = graph.openManagement()
+      // mgmt.updateIndex(mgmt.getGraphIndex("whenFromIndex"), SchemaAction.REINDEX).get()
+      // mgmt.commit()
+    };
+
+    configTags = { ->
+      mgmt = graph.openManagement();
+      if(mgmt.getPropertyKey("tags") != null) return;
+      mgmt.makePropertyKey("tags").dataType(String.class).cardinality(Cardinality.SET).make();
+      mgmt.commit();
+    };
+
+    makeIndexFor("when_from", Instant.class);
+    configTags();
+
   }
 ] as LifeCycleHook
 
