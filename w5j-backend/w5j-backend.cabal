@@ -19,12 +19,13 @@ library
   ghc-options:          -Wall -fno-warn-unused-imports
   -- default-extensions:   
   other-extensions:     OverloadedStrings
-  exposed-modules:      W5J.GremlinTest
-  other-modules:        W5J.What,
+  exposed-modules:      W5J.GremlinTest,
+                        W5J.What,
                         W5J.When,
                         W5J.Interval,
                         W5J.Time,
                         W5J.DB.TinkerPop
+  -- other-modules:        
   build-depends:        base,
                         text,
                         time,
@@ -41,7 +42,7 @@ executable w5j-backend
   ghc-options:          -Wall -fno-warn-unused-imports
   -- other-modules:        
   -- default-extensions:   
-  -- other-extensions:     
+  other-extensions:     OverloadedStrings
   build-depends:        base, w5j-backend
 
 test-suite spec
