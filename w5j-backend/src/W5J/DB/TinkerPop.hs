@@ -22,6 +22,7 @@ import qualified Database.TinkerPop as TP
 
 import W5J.Time (currentTime, toEpochMsec)
 import W5J.What (What(..), WhatID)
+import W5J.When (When(..))
 
 -- | Make a 'Connection' to the given server and run the given action.
 withConnection :: String
@@ -47,6 +48,8 @@ withConnection = TP.run
 -- sessionを使うためにはリクエストの"processor"を"session"にして、
 -- "eval"オペレーションの"session"フィールドにUUIDを詰めないといけない。
 -- この機能はgremlin-haskellにはない。。
+--
+-- でもひとつのリクエストで複文書けるな。
 
 
 -- | Add a new 'What' vertex into the DB.
@@ -86,3 +89,26 @@ addWhat conn what = do
     handleResult (Right ret) = do
       print ret  --- > [Number 8352.0]
       return 0 -- todo
+
+
+type VertexID = Integer
+
+-- | Add a 'When' vertex.
+addWhen :: Connection -> When -> IO VertexID
+addWhen conn wh = handleResult =<< TP.submit conn gremlin (Just binds)
+  where
+    gremlin = "g.addV(label, 'when', "
+              <> "'instant', INSTANT, "
+              <> "'is_time_explicit', IS_TIME_EXPLICIT, "
+              <> "'time_zone', TIME_ZONE).id()"
+    binds = HM.fromList
+            [ ("INSTANT", toJSON $ toEpochMsec $ whenInstant wh),
+              ("IS_TIME_EXPLICIT", toJSON $ whenIsTimeExplicit wh),
+              ("TIME_ZONE", toJSON $ dummy_tz) -- TODO
+            ]
+    dummy_tz :: String
+    dummy_tz = "DUMMY_TZ"
+    handleResult (Left err) = error err -- todo
+    handleResult (Right ret) = do
+      print ret
+      return 0 -- TODO
