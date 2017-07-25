@@ -11,7 +11,8 @@ module W5J.Time
          zeroTime,
          currentTime,
          toEpochMsec,
-         fromEpochMsec
+         fromEpochMsec,
+         utcTimeZone
        ) where
 
 import Data.UnixTime
@@ -19,6 +20,7 @@ import Data.UnixTime
     addUnixDiffTime, microSecondsToUnixDiffTime
   )
 import Data.Time.LocalTime (TimeZone)
+import qualified Data.Time.LocalTime as LocalTime
 import Foreign.C.Types (CTime(..))
 
 -- | A time instant, without knowledge of any calendar systems or time
@@ -45,3 +47,6 @@ toEpochMsec = toMsec . unTimeInstant
 fromEpochMsec :: Integer -> TimeInstant
 fromEpochMsec ems = TimeInstant
                     $ addUnixDiffTime (UnixTime 0 0) (microSecondsToUnixDiffTime (ems * 1000))
+
+utcTimeZone :: TimeZone
+utcTimeZone = LocalTime.utc

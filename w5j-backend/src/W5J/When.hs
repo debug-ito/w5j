@@ -5,10 +5,12 @@
 --
 -- 
 module W5J.When
-       ( When(..)
+       ( When(..),
+         currentUTCWhen
        ) where
 
-import W5J.Time (TimeInstant, TimeZone)
+import Control.Applicative ((<$>), (<*>), pure)
+import W5J.Time (TimeInstant, TimeZone, utcTimeZone, currentTime)
 
 -- | 'When' vertex. It is a date or datetime. In either case, it has
 -- 'TimeZone'.
@@ -22,3 +24,6 @@ data When =
     whenTimeZone :: !TimeZone
   }
   deriving (Eq,Ord,Show)
+
+currentUTCWhen :: IO When
+currentUTCWhen = When <$> currentTime <*> pure True <*> pure utcTimeZone
