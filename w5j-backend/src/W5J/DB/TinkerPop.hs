@@ -8,7 +8,10 @@
 module W5J.DB.TinkerPop
        ( Connection,
          withConnection,
-         addWhat
+         addWhat,
+         updateWhat,
+         getWhatById,
+         deleteWhat
        ) where
 
 import Control.Monad.Trans.State (State)
@@ -70,6 +73,25 @@ addWhat conn what = do
     handleResult (Right ret) = do
       print ret  --- > [Number 8352.0]
       return 0 -- todo
+
+-- | Update an existing 'What' vertex specified by the 'whatId' field.
+updateWhat :: Connection
+           -> What
+           -- ^ 'whatUpdatedAt' field is ignored and set
+           -- automatically.
+           -> IO ()
+updateWhat = undefined
+-- TODO. We can just delete and re-create When vertices.
+
+-- | Get 'What' vertex with the given 'WhatID'.
+getWhatById :: Connection -> WhatID -> IO (Maybe What)
+getWhatById = undefined -- TODO
+
+-- | Delete a 'What' vertex.
+deleteWhat :: Connection -> WhatID -> IO ()
+deleteWhat = undefined
+-- TODO. how should we treat other vertices connected (directly or
+-- non-directly) connected to the deleted vertex?
 
 addWhatSentences :: What -> GBuilder Text
 addWhatSentences what =
