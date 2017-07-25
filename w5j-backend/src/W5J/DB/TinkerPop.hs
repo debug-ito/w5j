@@ -64,30 +64,19 @@ addWhat :: Connection
         -- ^ newly created ID for 'whatId' field.
 addWhat conn what = do
   cur_time <- currentTime
-  handleResult =<< TP.submit conn gremlin (Just $ binds cur_time)
+  let (gremlin, binds) = gremlinAndBinding cur_time
+  handleResult =<< TP.submit conn (gremlin <> ".id()") (Just binds)
   where
-    gremlin = "g.addV(label, 'what', "
-              <> "'title', TITLE, "
-              <> "'body', BODY, "
-              <> gremlin_tags
-              <> "'created_at', CREATED_AT, "
-              <> "'updated_at', UPDATED_AT).id()"
-    indices :: [Int]
-    indices = [0 ..]
-    indexed_tags = zip indices $ whatTags what
-    tagsVar i = "TAGS" <> (pack $ show i)
-    gremlin_tags = mconcat $ map (\(i, _) -> "'tags', " <> tagsVar i <> ", ") $ indexed_tags
-    binds cur_time = HM.fromList
-                     ( [ ("TITLE", toJSON $ whatTitle $ what),
-                         ("BODY", toJSON $ whatBody $ what),
-                         ("CREATED_AT", toJSON $ cur_time_msec),
-                         ("UPDATED_AT", toJSON $ cur_time_msec)
-                       ]
-                       ++ binds_tags
-                     )
+    props cur_time = [ ("title", toJSON $ whatTitle $ what),
+                       ("body", toJSON $ whatBody $ what),
+                       ("created_at", toJSON $ cur_time_msec),
+                       ("updated_at", toJSON $ cur_time_msec)
+                     ]
+                     ++ (map (\t -> ("tags", toJSON t)) $ whatTags what)
       where
         cur_time_msec = toEpochMsec cur_time
-    binds_tags = map (\(i, tag) -> (tagsVar i, toJSON tag)) indexed_tags
+    gremlinAndBinding cur_time =
+      runGBuilder $ addVertexSentence "what" Nothing (props cur_time)
     handleResult (Left err) = error err -- todo
     handleResult (Right ret) = do
       print ret  --- > [Number 8352.0]
@@ -130,6 +119,12 @@ newPlaceHolder val = do
 
 place :: PlaceHolderIndex -> Text
 place index = "v" <> (pack $ show index)
+
+runGBuilder :: GBuilder a -> (a, Binding)
+runGBuilder gbuilder = (ret, binding)
+  where
+    (ret, (_, values)) = State.runState gbuilder (0, [])
+    binding = HM.fromList $ zip (map place [0 ..]) $ values
 
 addVertexSentence :: Text
                   -- ^ vertex label
