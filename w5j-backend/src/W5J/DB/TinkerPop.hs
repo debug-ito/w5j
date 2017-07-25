@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- |
 -- Module: W5J.DB.TinkerPop
 -- Description: DB backend for TinkerPop Gremlin Server
@@ -10,6 +11,9 @@ module W5J.DB.TinkerPop
          addWhat
        ) where
 
+import Data.Aeson (ToJSON(toJSON))
+import qualified Data.HashMap.Strict as HM
+import Data.Monoid ((<>))
 import Database.TinkerPop.Types
   ( Connection
   )
@@ -27,11 +31,32 @@ withConnection :: String
                -> IO ()
 withConnection = TP.run
 
+
+-- How to configure transactions in the remote Gremlin Server?
+
 -- | Add a new 'What' vertex into the DB.
 addWhat :: Connection
         -> What
         -- ^ 'What' vertex to add. 'whatId' field is ignored.
         -> IO (WhatID)
         -- ^ newly created ID for 'whatId' field.
-addWhat = undefined
+addWhat conn what = handleResult =<< TP.submit conn gremlin (Just binds)
+  where
+    gremlin = "g.addV(label, 'what', "
+              <> "'title', TITLE, "
+              <> "'body', BODY, "
+              <> "'tags', TAGS, "
+              <> "'created_at', CREATED_AT, "
+              <> "'updated_at', UPDATED_AT).id()"
+    binds = HM.fromList
+            [ ("TITLE", toJSON $ whatTitle $ what),
+              ("BODY", toJSON $ whatBody $ what),
+              ("TAGS", toJSON $ whatTags $ what),
+              ("CREATED_AT", toJSON $ dummy_time),
+              ("UPDATED_AT", toJSON $ dummy_time)
+            ]
+    dummy_time :: Int
+    dummy_time = 1234 -- todo
+    handleResult (Left err) = error err -- todo
+    handleResult (Right _) = return 0 -- todo. parse the values.
 

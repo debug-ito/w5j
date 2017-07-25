@@ -30,7 +30,9 @@ library
                         time,
                         unix-time,
                         intervals,
-                        gremlin-haskell
+                        gremlin-haskell,
+                        unordered-containers,
+                        aeson
 
 executable w5j-backend
   default-language:     Haskell2010
