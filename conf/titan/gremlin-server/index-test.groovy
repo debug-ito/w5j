@@ -27,7 +27,6 @@ hook = [
       mgmt.commit();
     };
 
-    makeIndexFor("when_from", Instant.class);
     configTags();
 
   }
