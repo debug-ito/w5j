@@ -82,7 +82,9 @@ addWhat conn what = do
                     Nothing -> return ""
                     Just int_when ->
                       seqGremlin [ addWhenSentence (Just "vwhen_from") $ inf int_when,
-                                   addWhenSentence (Just "vwhen_to") $ sup int_when
+                                   addWhenSentence (Just "vwhen_to") $ sup int_when,
+                                   addEdgeSentence "vwhat" "vwhen_from" "when_from" Nothing,
+                                   addEdgeSentence "vwhat" "vwhen_to" "when_to" Nothing
                                  ],
                    return "vwhat.id()"
                  ]
@@ -154,4 +156,22 @@ addVertexSentence label mreceiver props = gremlin
     pairToGremlin (prop_name, var_name) =
       ", '" <> prop_name <> "', " <> var_name
 
-
+addEdgeSentence :: Text
+                -- ^ source vertex variable name
+                -> Text
+                -- ^ destination vertex variable name
+                -> Text
+                -- ^ edge label
+                -> Maybe Text
+                -- ^ receiver variable name
+                -> GBuilder Text
+addEdgeSentence src dst label mreceiver =
+  case mreceiver of
+   Nothing -> add_sentence
+   Just receiver -> do
+     s <- add_sentence
+     return (receiver <> " = " <> s)
+  where
+    add_sentence = do
+      var_label <- fmap place $ newPlaceHolder $ toJSON label
+      return (src <> ".addEdge(" <> var_label <> ", " <> dst <> ")")
