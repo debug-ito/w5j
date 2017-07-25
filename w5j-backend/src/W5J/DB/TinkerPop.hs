@@ -83,29 +83,18 @@ addWhat conn what = do
       return 0 -- todo
 
 
-type VertexID = Integer
-
--- | Add a 'When' vertex.
-addWhen :: Connection -> When -> IO VertexID
-addWhen conn wh = handleResult =<< TP.submit conn gremlin (Just binds)
+addWhenSentence :: Maybe Text
+                -- ^ variable name to receive the result
+                -> When
+                -> GBuilder Text
+addWhenSentence mreceiver wh = addVertexSentence "when" mreceiver props
   where
-    gremlin = "g.addV(label, 'when', "
-              <> "'instant', INSTANT, "
-              <> "'is_time_explicit', IS_TIME_EXPLICIT, "
-              <> "'time_zone', TIME_ZONE).id()"
-    binds = HM.fromList
-            [ ("INSTANT", toJSON $ toEpochMsec $ whenInstant wh),
-              ("IS_TIME_EXPLICIT", toJSON $ whenIsTimeExplicit wh),
-              ("TIME_ZONE", toJSON $ dummy_tz) -- TODO
+    props = [ ("instant", toJSON $ toEpochMsec $ whenInstant wh),
+              ("is_time_explicit", toJSON $ whenIsTimeExplicit wh),
+              ("time_zone", toJSON $ dummy_tz) -- TODO
             ]
     dummy_tz :: String
     dummy_tz = "DUMMY_TZ"
-    handleResult (Left err) = error err -- todo
-    handleResult (Right ret) = do
-      print ret
-      return 0 -- TODO
-
--- addWhenじゃダメか。複文をたたきつけないといけない。
 
 type PlaceHolderIndex = Int
 
