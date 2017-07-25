@@ -25,7 +25,7 @@ library
                         W5J.Interval,
                         W5J.Time,
                         W5J.DB.TinkerPop
-  -- other-modules:        
+  other-modules:        W5J.DB.TinkerPop.Error
   build-depends:        base,
                         text,
                         time,

@@ -26,10 +26,12 @@ import Database.TinkerPop.Types
   )
 import qualified Database.TinkerPop as TP
 
+import W5J.DB.TinkerPop.Error (toGremlinError)
 import W5J.Interval (inf, sup)
 import W5J.Time (currentTime, toEpochMsec)
 import W5J.What (What(..), WhatID)
 import W5J.When (When(..))
+
 
 -- | Make a 'Connection' to the given server and run the given action.
 withConnection :: String
@@ -64,13 +66,12 @@ addWhat :: Connection
 addWhat conn what = do
   cur_time <- currentTime
   let (gremlin, binds) = runGBuilder $ addWhatSentences $ setCurrentTime cur_time what
-  handleResult =<< TP.submit conn gremlin (Just binds)
+  parseResult =<< (toGremlinError $ TP.submit conn gremlin (Just binds))
   where
     setCurrentTime t w = w { whatCreatedAt = t,
                              whatUpdatedAt = t
                            }
-    handleResult (Left err) = error err -- todo
-    handleResult (Right ret) = do
+    parseResult ret = do
       print ret  --- > [Number 8352.0]
       return 0 -- todo
 
