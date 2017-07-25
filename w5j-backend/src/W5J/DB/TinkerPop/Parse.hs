@@ -15,11 +15,12 @@ module W5J.DB.TinkerPop.Parse
        ) where
 
 import Control.Applicative ((<$>), empty)
-import Control.Monad (mapM)
+import Control.Monad (mapM, guard)
 import Data.Aeson (FromJSON(parseJSON), Object, (.:), Value(Object,Array))
 import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
-import qualified Data.HashMap.Strict (HashMap)
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HM
 import Data.Text (Text)
 
 
@@ -55,6 +56,16 @@ type VertexLabel = Text
 
 parseVertex :: (VertexID -> VertexLabel -> Object -> Parser a)
             -- ^ @id -> label -> properties -> Parser@
+            -> Value
             -> Parser a
-parseVertex = undefined
+parseVertex upperParser (Object obj) = do
+  vtype <- (obj .: "type") :: Parser Text
+  guard (vtype == "vertex")
+  vid <- obj .: "id"
+  label <- obj .: "label"
+  case HM.lookup "properties" obj of
+   Just (Object prop_obj) -> upperParser vid label prop_obj
+   _ -> empty
+parseVertex _ _ = empty
+
 
