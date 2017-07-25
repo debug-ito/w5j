@@ -23,6 +23,7 @@ import Database.TinkerPop.Types
   )
 import qualified Database.TinkerPop as TP
 
+import W5J.Interval (inf, sup)
 import W5J.Time (currentTime, toEpochMsec)
 import W5J.What (What(..), WhatID)
 import W5J.When (When(..))
@@ -64,8 +65,8 @@ addWhat :: Connection
         -- ^ newly created ID for 'whatId' field.
 addWhat conn what = do
   cur_time <- currentTime
-  let (gremlin, binds) = gremlinAndBinding cur_time
-  handleResult =<< TP.submit conn (gremlin <> ".id()") (Just binds)
+  let (gremlin, binds) = runGBuilder $ gBuilder cur_time
+  handleResult =<< TP.submit conn gremlin (Just binds)
   where
     props cur_time = [ ("title", toJSON $ whatTitle $ what),
                        ("body", toJSON $ whatBody $ what),
@@ -75,8 +76,16 @@ addWhat conn what = do
                      ++ (map (\t -> ("tags", toJSON t)) $ whatTags what)
       where
         cur_time_msec = toEpochMsec cur_time
-    gremlinAndBinding cur_time =
-      runGBuilder $ addVertexSentence "what" Nothing (props cur_time)
+    gBuilder cur_time =
+      seqGremlin [ addVertexSentence "what" (Just "vwhat") (props cur_time),
+                   case whatTime what of
+                    Nothing -> return ""
+                    Just int_when ->
+                      seqGremlin [ addWhenSentence (Just "vwhen_from") $ inf int_when,
+                                   addWhenSentence (Just "vwhen_to") $ sup int_when
+                                 ],
+                   return "vwhat.id()"
+                 ]
     handleResult (Left err) = error err -- todo
     handleResult (Right ret) = do
       print ret  --- > [Number 8352.0]
