@@ -26,7 +26,7 @@ import Database.TinkerPop.Types
   )
 import qualified Database.TinkerPop as TP
 
-import W5J.DB.TinkerPop.Error (toGremlinError)
+import W5J.DB.TinkerPop.Error (toGremlinError, parseError, ioFromJSON)
 import W5J.Interval (inf, sup)
 import W5J.Time (currentTime, toEpochMsec)
 import W5J.What (What(..), WhatID)
@@ -71,9 +71,8 @@ addWhat conn what = do
     setCurrentTime t w = w { whatCreatedAt = t,
                              whatUpdatedAt = t
                            }
-    parseResult ret = do
-      print ret  --- > [Number 8352.0]
-      return 0 -- todo
+    parseResult [] = parseError "No element in the result."
+    parseResult (ret : _) = ioFromJSON ret
 
 -- | Update an existing 'What' vertex specified by the 'whatId' field.
 updateWhat :: Connection
