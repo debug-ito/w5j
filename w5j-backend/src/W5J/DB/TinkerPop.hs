@@ -20,7 +20,7 @@ import Database.TinkerPop.Types
   )
 import qualified Database.TinkerPop as TP
 
-import W5J.Time (currentTime)
+import W5J.Time (currentTime, toEpochMsec)
 import W5J.What (What(..), WhatID)
 
 -- | Make a 'Connection' to the given server and run the given action.
@@ -58,17 +58,18 @@ addWhat conn what = do
     indexed_tags = zip indices $ whatTags what
     tagsVar i = "TAGS" <> (pack $ show i)
     gremlin_tags = mconcat $ map (\(i, _) -> "'tags', " <> tagsVar i <> ", ") $ indexed_tags
-    binds _ = HM.fromList
-              ( [ ("TITLE", toJSON $ whatTitle $ what),
-                  ("BODY", toJSON $ whatBody $ what),
-                  ("CREATED_AT", toJSON $ dummy_time),
-                  ("UPDATED_AT", toJSON $ dummy_time)
-                ]
-                ++ binds_tags
-              )
+    binds cur_time = HM.fromList
+                     ( [ ("TITLE", toJSON $ whatTitle $ what),
+                         ("BODY", toJSON $ whatBody $ what),
+                         ("CREATED_AT", toJSON $ cur_time_msec),
+                         ("UPDATED_AT", toJSON $ cur_time_msec)
+                       ]
+                       ++ binds_tags
+                     )
+      where
+        cur_time_msec = toEpochMsec cur_time
     binds_tags = map (\(i, tag) -> (tagsVar i, toJSON tag)) indexed_tags
-    dummy_time :: Int
-    dummy_time = 1234 -- todo
     handleResult (Left err) = error err -- todo
-    handleResult (Right _) = return 0 -- todo. parse the values.
-
+    handleResult (Right ret) = do
+      print ret  --- > [Number 8352.0]
+      return 0 -- todo
