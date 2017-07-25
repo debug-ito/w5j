@@ -23,7 +23,7 @@ data When =
     -- should be ignored.
     whenTimeZone :: !TimeZone
   }
-  deriving (Eq,Ord,Show)
+  deriving (Eq,Ord,Show) -- TODO: Ord should not consider TimeZone
 
 currentUTCWhen :: IO When
 currentUTCWhen = When <$> currentTime <*> pure True <*> pure utcTimeZone

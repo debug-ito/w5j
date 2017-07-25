@@ -38,3 +38,13 @@ data What =
     whatUpdatedAt :: !TimeInstant
   }
   deriving (Eq,Ord,Show)
+
+-- TODO: そういやWhereリストも必要。ていうか、When (vertex)とWhere
+-- (vertex)をWhatの中に入れ込む作りにすると、DBでのWhatのupdate処理が
+-- めちゃくちゃ面倒になりそうな気がする。抽象化のレベルは下がるが、
+-- WhatとWhen, Whereは切り離して管理したほうがDB側の実装はシンプルにな
+-- るし、DBのユーザ側のコードもそんなに困らない気がする。どのみちHowは
+-- 切り離しているし(Howは数が多くなるかもしれないので切り離すべき)
+
+-- なんならWhat, When, Whereを全て抱き込んだデータ型を作ってもよい。で
+-- もそれはDBのI/Fにはならない。
