@@ -39,21 +39,16 @@ withConnection :: String
 withConnection = TP.run
 
 
--- How to configure transactions in the remote Gremlin Server?
-
--- when I connect to the remote server from gremlin.sh, it seems
--- transactions are not enabled. Every operation seems immediately
--- commited.
-
--- https://groups.google.com/forum/#!topic/gremlin-users/S4T9yOfHlV4
--- http://tinkerpop.apache.org/docs/3.0.1-incubating/#sessions
--- どうやらデフォルトで"sessionless"で動作するらしい。要はauto commitモード。
+-- We use multiple Gremlin sentences in a single request. This is
+-- because by default each request is enclosed in a
+-- transaction. TinkerPop allows transactions over multiple requests
+-- by means of "session", but gremlin-haskell (as of 0.1.0.2) does not
+-- support it.
 --
--- sessionを使うためにはリクエストの"processor"を"session"にして、
--- "eval"オペレーションの"session"フィールドにUUIDを詰めないといけない。
--- この機能はgremlin-haskellにはない。。
+-- See:
 --
--- でもひとつのリクエストで複文書けるな。
+-- - https://groups.google.com/forum/#!topic/gremlin-users/S4T9yOfHlV4
+-- - http://tinkerpop.apache.org/docs/3.0.1-incubating/#sessions
 
 
 -- | Add a new 'What' vertex into the DB.
@@ -65,33 +60,39 @@ addWhat :: Connection
         -- ^ newly created ID for 'whatId' field.
 addWhat conn what = do
   cur_time <- currentTime
-  let (gremlin, binds) = runGBuilder $ gBuilder cur_time
+  let (gremlin, binds) = runGBuilder $ addWhatSentences $ setCurrentTime cur_time what
   handleResult =<< TP.submit conn gremlin (Just binds)
   where
-    props cur_time = [ ("title", toJSON $ whatTitle $ what),
-                       ("body", toJSON $ whatBody $ what),
-                       ("created_at", toJSON $ cur_time_msec),
-                       ("updated_at", toJSON $ cur_time_msec)
-                     ]
-                     ++ (map (\t -> ("tags", toJSON t)) $ whatTags what)
-      where
-        cur_time_msec = toEpochMsec cur_time
-    gBuilder cur_time =
-      seqGremlin [ addVertexSentence "what" (Just "vwhat") (props cur_time),
-                   case whatTime what of
-                    Nothing -> return ""
-                    Just int_when ->
-                      seqGremlin [ addWhenSentence (Just "vwhen_from") $ inf int_when,
-                                   addWhenSentence (Just "vwhen_to") $ sup int_when,
-                                   addEdgeSentence "vwhat" "vwhen_from" "when_from" Nothing,
-                                   addEdgeSentence "vwhat" "vwhen_to" "when_to" Nothing
-                                 ],
-                   return "vwhat.id()"
-                 ]
+    setCurrentTime t w = w { whatCreatedAt = t,
+                             whatUpdatedAt = t
+                           }
     handleResult (Left err) = error err -- todo
     handleResult (Right ret) = do
       print ret  --- > [Number 8352.0]
       return 0 -- todo
+
+addWhatSentences :: What -> GBuilder Text
+addWhatSentences what =
+  seqGremlin [ addVertexSentence "what" (Just "vwhat") props,
+               when_sentences,
+               return "vwhat.id()"
+             ]
+  where
+    when_sentences =
+      case whatTime what of
+       Nothing -> return ""
+       Just int_when ->
+         seqGremlin [ addWhenSentence (Just "vwhen_from") $ inf int_when,
+                      addWhenSentence (Just "vwhen_to") $ sup int_when,
+                      addEdgeSentence "vwhat" "vwhen_from" "when_from" Nothing,
+                      addEdgeSentence "vwhat" "vwhen_to" "when_to" Nothing
+                    ]
+    props = [ ("title", toJSON $ whatTitle what),
+              ("body", toJSON $ whatBody what),
+              ("created_at", toJSON $ toEpochMsec $ whatCreatedAt what),
+              ("updated_at", toJSON $ toEpochMsec $ whatUpdatedAt what)
+            ]
+            ++ (map (\t -> ("tags", toJSON t)) $ whatTags what)
 
 
 addWhenSentence :: Maybe Text
