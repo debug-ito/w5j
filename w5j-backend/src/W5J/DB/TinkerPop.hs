@@ -73,7 +73,7 @@ addWhat conn what = do
 
 addWhatSentences :: What -> GBuilder Text
 addWhatSentences what =
-  seqGremlin [ addVertexSentence "what" (Just "vwhat") props,
+  seqGremlin [ fmap (receiveBy "vwhat") $ addVertexSentence "what" props,
                when_sentences,
                return "vwhat.id()"
              ]
@@ -82,10 +82,10 @@ addWhatSentences what =
       case whatTime what of
        Nothing -> return ""
        Just int_when ->
-         seqGremlin [ addWhenSentence (Just "vwhen_from") $ inf int_when,
-                      addWhenSentence (Just "vwhen_to") $ sup int_when,
-                      addEdgeSentence "vwhat" "vwhen_from" "when_from" Nothing,
-                      addEdgeSentence "vwhat" "vwhen_to" "when_to" Nothing
+         seqGremlin [ fmap (receiveBy "vwhen_from") $ addWhenSentence $ inf int_when,
+                      fmap (receiveBy "vwhen_to") $ addWhenSentence $ sup int_when,
+                      addEdgeSentence "vwhat" "vwhen_from" "when_from",
+                      addEdgeSentence "vwhat" "vwhen_to" "when_to"
                     ]
     props = [ ("title", toJSON $ whatTitle what),
               ("body", toJSON $ whatBody what),
@@ -94,12 +94,11 @@ addWhatSentences what =
             ]
             ++ (map (\t -> ("tags", toJSON t)) $ whatTags what)
 
+receiveBy :: Text -> Text -> Text
+receiveBy var_name gremlin = var_name <> " = " <> gremlin
 
-addWhenSentence :: Maybe Text
-                -- ^ variable name to receive the result
-                -> When
-                -> GBuilder Text
-addWhenSentence mreceiver wh = addVertexSentence "when" mreceiver props
+addWhenSentence :: When -> GBuilder Text
+addWhenSentence wh = addVertexSentence "when" props
   where
     props = [ ("instant", toJSON $ toEpochMsec $ whenInstant wh),
               ("is_time_explicit", toJSON $ whenIsTimeExplicit wh),
@@ -134,19 +133,12 @@ seqGremlin = fmap seqSentences . sequence
 
 addVertexSentence :: Text
                   -- ^ vertex label
-                  -> Maybe Text
-                  -- ^ variable name to receive the result
                   -> [(Text, Value)]
                   -- ^ properties
                   -> GBuilder Text
                   -- ^ gremlin script
-addVertexSentence label mreceiver props = gremlin
+addVertexSentence label props = gremlin_addV
   where
-    gremlin = case mreceiver of
-      Nothing -> gremlin_addV
-      Just receiver -> do
-        add_sentence <- gremlin_addV
-        return (receiver <> " = " <> add_sentence)
     gremlin_addV = do
       var_label <- fmap place $ newPlaceHolder $ toJSON $ label
       props_gremlin <- fmap (mconcat . map pairToGremlin) $ mapM toVarNamePair props
@@ -163,15 +155,8 @@ addEdgeSentence :: Text
                 -- ^ destination vertex variable name
                 -> Text
                 -- ^ edge label
-                -> Maybe Text
-                -- ^ receiver variable name
                 -> GBuilder Text
-addEdgeSentence src dst label mreceiver =
-  case mreceiver of
-   Nothing -> add_sentence
-   Just receiver -> do
-     s <- add_sentence
-     return (receiver <> " = " <> s)
+addEdgeSentence src dst label = add_sentence
   where
     add_sentence = do
       var_label <- fmap place $ newPlaceHolder $ toJSON label
