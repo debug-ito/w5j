@@ -45,8 +45,8 @@ withConnection :: String
 withConnection = TP.run
 
 
--- Sometimes we use multiple Gremlin sentences in a single
--- request. This is because by default each request is enclosed in a
+-- We use multiple Gremlin sentences in a single request. This is
+-- because by default each request is enclosed in a
 -- transaction. TinkerPop allows transactions over multiple requests
 -- by means of "session", but gremlin-haskell (as of 0.1.0.2) does not
 -- support it.
@@ -82,7 +82,7 @@ updateWhat :: Connection
            -- automatically.
            -> IO ()
 updateWhat = undefined
--- TODO.
+-- TODO. We can just delete and re-create When vertices.
 
 -- | Get 'What' vertex with the given 'WhatID'.
 getWhatById :: Connection -> WhatID -> IO (Maybe What)
@@ -142,9 +142,19 @@ deleteWhat = undefined
 addWhatSentences :: What -> GBuilder Text
 addWhatSentences what =
   seqGremlin [ fmap (receiveBy "vwhat") $ addVertexSentence "what" props,
+               when_sentences,
                return "vwhat.id()"
              ]
   where
+    when_sentences =
+      case whatTime what of
+       Nothing -> return ""
+       Just int_when ->
+         seqGremlin [ fmap (receiveBy "vwhen_from") $ addWhenSentence $ inf int_when,
+                      fmap (receiveBy "vwhen_to") $ addWhenSentence $ sup int_when,
+                      addEdgeSentence "vwhat" "vwhen_from" "when_from",
+                      addEdgeSentence "vwhat" "vwhen_to" "when_to"
+                    ]
     props = [ ("title", toJSON $ whatTitle what),
               ("body", toJSON $ whatBody what),
               ("created_at", toJSON $ toEpochMsec $ whatCreatedAt what),
