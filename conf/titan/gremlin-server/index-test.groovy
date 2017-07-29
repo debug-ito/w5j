@@ -1,5 +1,7 @@
 
-hook = [
+def globals = [:];
+
+globals["hook"] = [
   onStartUp : { ctx ->
     makeIndexFor = { prop_name, data_class -> 
       graph.tx().rollback();
@@ -33,4 +35,29 @@ hook = [
 ] as LifeCycleHook
 
 // define the default TraversalSource to bind queries to.
-g = graph.traversal()
+def g = globals["g"] = graph.traversal()
+
+def addWhen = globals["addWhen"] = { props ->
+  def v = graph.addVertex(label, "when");
+  ["instant", "is_time_explicit", "time_zone"].each { k ->
+    v.property(k, props[k]);
+  };
+  return v;
+};
+
+def addWhat = globals["addWhat"] = { props ->
+  def v = graph.addVertex(label, "what");
+  ["title", "body", "created_at", "updated_at"].each { k ->
+    v.property(k, props[k]);
+  };
+  if(props["when"] != null) {
+    def v_from = addWhen(props["when"]["from"]);
+    def v_to = addWhen(props["when"]["to"]);
+    v.addEdge("when_from", v_from);
+    v.addEdge("when_to", v_to);
+  }
+  return v;
+};
+
+// return bindings
+globals;
