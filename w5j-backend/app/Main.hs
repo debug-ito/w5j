@@ -21,7 +21,7 @@ mainWithConn conn = do
     what cur_when = What { whatId = 0,
                            whatTitle = "whaaat title",
                            -- whatTime = Just (cur_when ... cur_when),
-                           whatTime = Nothing,
+                           -- whatTime = Nothing,
                            whatBody = "whaat body",
                            whatTags = ["foo", "bar", "buzz", "foo"],
                            whatCreatedAt = zeroTime,
