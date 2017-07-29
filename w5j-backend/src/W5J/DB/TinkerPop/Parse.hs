@@ -7,12 +7,16 @@
 -- 
 module W5J.DB.TinkerPop.Parse
        ( AesonWhat(..),
-         AesonWhen(..)
+         AesonWhen(..),
+         ioFromJSON
        ) where
 
 import Control.Applicative ((<$>), empty)
 import Control.Monad (mapM, guard)
-import Data.Aeson (FromJSON(parseJSON), Object, (.:), Value(Object,Array))
+import Data.Aeson
+  ( FromJSON(parseJSON), Object, (.:), Value(Object,Array), fromJSON,
+    Result(Error,Success)
+  )
 import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
 import Data.HashMap.Strict (HashMap)
@@ -21,6 +25,7 @@ import Data.Text (Text)
 
 import W5J.What (What(..))
 import W5J.When (When(..))
+import W5J.DB.TinkerPop.Error (parseError)
 
 -- | The atomic (vertex) property value
 newtype PropertyValue a = PropertyValue { unPropertyValue :: a }
@@ -78,4 +83,10 @@ newtype AesonWhen = AesonWhen When
 instance FromJSON AesonWhen where
   parseJSON = undefined -- TODO
 
+
+ioFromJSON :: FromJSON a => Value -> IO a
+ioFromJSON = toError . fromJSON
+  where
+    toError (Error err) = parseError err
+    toError (Success a) = return a
 

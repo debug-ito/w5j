@@ -26,7 +26,8 @@ import Database.TinkerPop.Types
   )
 import qualified Database.TinkerPop as TP
 
-import W5J.DB.TinkerPop.Error (toGremlinError, parseError, ioFromJSON)
+import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
+import W5J.DB.TinkerPop.Parse (ioFromJSON)
 import W5J.Interval (inf, sup)
 import W5J.Time (currentTime, toEpochMsec)
 import W5J.What (What(..), WhatID)
