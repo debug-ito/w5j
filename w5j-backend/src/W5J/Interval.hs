@@ -9,7 +9,8 @@ module W5J.Interval
        ( Interval,
          (...),
          inf,
-         sup
+         sup,
+         mapInterval
        ) where
 
 import Numeric.Interval.NonEmpty
@@ -18,3 +19,8 @@ import Numeric.Interval.NonEmpty
     inf,
     sup
   )
+
+mapInterval :: Ord b => (a -> b) -> Interval a -> Interval b
+mapInterval f aint = binf ... bsup
+  where binf = f $ inf aint
+        bsup = f $ sup aint
