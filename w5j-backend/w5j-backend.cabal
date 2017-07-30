@@ -26,7 +26,8 @@ library
                         W5J.Time,
                         W5J.DB.TinkerPop
   other-modules:        W5J.DB.TinkerPop.Error,
-                        W5J.DB.TinkerPop.Parse
+                        W5J.DB.TinkerPop.Parse,
+                        W5J.Aeson
   build-depends:        base,
                         text,
                         time,
