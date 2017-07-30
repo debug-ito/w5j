@@ -30,6 +30,7 @@ import qualified Database.TinkerPop as TP
 
 import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
 import W5J.DB.TinkerPop.Parse (ioFromJSON)
+import W5J.Aeson (toAWhat)
 import W5J.Interval (inf, sup)
 import W5J.Time (currentTime, toEpochMsec)
 import W5J.What (What(..), WhatID)
@@ -65,25 +66,7 @@ addWhat' conn what =
     (gremlin, binds) = runGBuilder $ do
       p <- fmap place $ newPlaceHolder what_val
       return ("addWhat(" <> p <> ").id()")
-    what_val = Aeson.object
-               [ ("title", toJSON $ whatTitle what),
-                 ("body", toJSON $ whatBody what),
-                 ("created_at", toJSON $ toEpochMsec $ whatCreatedAt what),
-                 ("updated_at", toJSON $ toEpochMsec $ whatUpdatedAt what),
-                 ("when", toJSON $ fmap intervalVal $ whatWhen what),
-                 ("tags", toJSON $ whatTags what)
-               ]
-    intervalVal int = Aeson.object
-                      [ ("from", whenVal $ inf $ int),
-                        ("to", whenVal $ sup $ int)
-                      ]
-    whenVal wh = Aeson.object
-                 [ ("instant", toJSON $ toEpochMsec $ whenInstant wh),
-                   ("is_time_explicit", toJSON $ whenIsTimeExplicit wh),
-                   ("time_zone", toJSON $ dummy_tz) -- TODO
-                 ]
-    dummy_tz :: Text
-    dummy_tz = "DUMMY_TZ"
+    what_val = Aeson.toJSON $ toAWhat what
     parseResult [] = parseError "No element in the result."
     parseResult (ret : _) = ioFromJSON ret
     
