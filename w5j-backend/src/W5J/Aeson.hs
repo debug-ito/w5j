@@ -10,6 +10,10 @@ module W5J.Aeson
          AWhen,
          toAWhen,
          fromAWhen,
+         -- * Where
+         AWhere,
+         toAWhere,
+         fromAWhere,
          -- * basics
          AInterval(..),
          ATimeInstant(..),
@@ -29,7 +33,9 @@ import W5J.Time
   ( TimeInstant, toEpochMsec, fromEpochMsec,
     TimeZone, tzToString, tzFromString
   )
+import W5J.What (What(..), WhatID, Tag)
 import W5J.When (When(..))
+import W5J.Where (Where(..), WhereID)
 
 newtype AInterval a = AInterval (Interval a)
                     deriving (Eq,Show,Ord)
@@ -89,3 +95,24 @@ toAWhen (When a b c) = AWhen (ATimeInstant a) b (ATimeZone c)
 
 fromAWhen :: AWhen -> When
 fromAWhen (AWhen (ATimeInstant a) b (ATimeZone c)) = When a b c
+
+
+newtype AWhere = AWhere Where
+
+instance ToJSON AWhere where
+  toJSON (AWhere w) = object [ ("where_id", toJSON $ whereId w),
+                               ("name", toJSON $ whereName w)
+                             ]
+
+instance FromJSON AWhere where
+  parseJSON (Object o) = fmap AWhere
+                         $ Where <$> (o .: "where_id") <*> (o .: "name")
+  parseJSON _ = empty
+
+toAWhere :: Where -> AWhere
+toAWhere = AWhere
+
+fromAWhere :: AWhere -> Where
+fromAWhere (AWhere w) = w
+
+
