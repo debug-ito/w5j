@@ -37,19 +37,33 @@ globals["hook"] = [
 // define the default TraversalSource to bind queries to.
 def g = globals["g"] = graph.traversal()
 
+def setProps = { elem, props, keys ->
+  keys.each { key ->
+    def val = props[key];
+    if(val instanceof List) {
+      // LIST/SET cardinality
+      def ex_prop = elem.property(key);
+      if(ex_prop != null) {
+        ex_prop.remove();
+      }
+      val.each { v ->
+        elem.property(key, v);
+      };
+      return;
+    }
+    elem.property(key, val);
+  };
+};
+
 def addWhen = globals["addWhen"] = { props ->
   def v = graph.addVertex(label, "when");
-  ["instant", "is_time_explicit", "time_zone"].each { k ->
-    v.property(k, props[k]);
-  };
+  setProps(v, props, ["instant", "is_time_explicit", "time_zone"]);
   return v;
 };
 
 def addWhat = globals["addWhat"] = { props ->
   def v = graph.addVertex(label, "what");
-  ["title", "body", "created_at", "updated_at"].each { k ->
-    v.property(k, props[k]);
-  };
+  setProps(v, props, ["title", "body", "created_at", "updated_at", "tags"])
   if(props["when"] != null) {
     def v_from = addWhen(props["when"]["from"]);
     def v_to = addWhen(props["when"]["to"]);

@@ -70,7 +70,8 @@ addWhat' conn what =
                  ("body", toJSON $ whatBody what),
                  ("created_at", toJSON $ toEpochMsec $ whatCreatedAt what),
                  ("updated_at", toJSON $ toEpochMsec $ whatUpdatedAt what),
-                 ("when", toJSON $ fmap intervalVal $ whatTime what)
+                 ("when", toJSON $ fmap intervalVal $ whatTime what),
+                 ("tags", toJSON $ whatTags what)
                ]
     intervalVal int = Aeson.object
                       [ ("from", whenVal $ inf $ int),
@@ -122,7 +123,7 @@ getWhatById conn wid = do
   return Nothing -- TODO
   where
     gremlin = "g.V(WID).hasLabel('what')"
-              <> ".map({ v = it.get(); [v, __(v).out('when_from').toList(), __(v).out('when_to').toList()] })"
+              <> ".map({ v = it.get(); [__(v).valueMap().toList(), __(v).out('when_from').toList(), __(v).out('when_to').toList()] })"
     binds = HM.fromList [("WID", toJSON wid)]
 
 -- vertex propertyのvalueは必ずArrayに入っている。これでSETやLIST cardinalityを表現している。
