@@ -15,7 +15,9 @@ type WhereID = Integer
 
 data Where =
   Where
-  { whereId :: !WhereID,
+  { whereId :: !(Maybe WhereID),
+    -- ^ ID is optional.
     whereName :: !Text
+    -- ^ name of Where vertex is unique.
   }
   deriving (Show,Eq,Ord)

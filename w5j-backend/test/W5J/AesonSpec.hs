@@ -40,8 +40,8 @@ sampleWhat =
                      whenIsTimeExplicit = True,
                      whenTimeZone = fromJust $ tzFromString "+0900"
                    }
-    wheres = [ Where { whereId = 5, whereName = "place 5" },
-               Where { whereId = 8, whereName = "place 8" }
+    wheres = [ Where { whereId = Just 5, whereName = "place 5" },
+               Where { whereId = Nothing , whereName = "new place" }
              ]
 
 sampleJSON :: Value
@@ -55,7 +55,7 @@ sampleJSON = fromJust $ decode $ [here|
   },
   "wheres": [
     {"where_id": 5, "name": "place 5"},
-    {"where_id": 8, "name": "place 8"}
+    {"where_id": null, "name": "new place"}
   ],
   "body": "hoge body",
   "tags": ["foo", "bar"],
