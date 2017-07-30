@@ -27,7 +27,7 @@ module W5J.Aeson
 import Control.Applicative ((<$>), (<*>), empty)
 import Data.Aeson
   ( ToJSON(..), FromJSON(..), object, (.:), Value(..),
-    genericToEncoding, genericParseJSON
+    genericToEncoding, genericToJSON, genericParseJSON
   )
 import qualified Data.Aeson.Types as AesonType
 import Data.Text (Text)
@@ -90,6 +90,7 @@ data AWhen =
   deriving (Eq,Show,Generic)
 
 instance ToJSON AWhen where
+  toJSON = genericToJSON aesonOpt
   toEncoding = genericToEncoding aesonOpt
 
 instance FromJSON AWhen where
@@ -139,6 +140,7 @@ data AWhat =
   deriving (Show,Eq,Generic)
 
 instance ToJSON AWhat where
+  toJSON = genericToJSON aesonOpt
   toEncoding = genericToEncoding aesonOpt
 
 instance FromJSON AWhat where
