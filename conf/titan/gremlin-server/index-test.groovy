@@ -55,14 +55,39 @@ def setProps = { elem, props, keys ->
   };
 };
 
+def toElem = { traversal ->
+  def elems = traversal.next(1);
+  if(elems.isEmpty()) {
+    return null;
+  }else {
+    return elems[0];
+  }
+};
+
+// def getOrCreateV = { id, _label ->
+//   if(id == null) {
+//     return graph.addVertex(_label);
+//   }
+//   return toElem(g.V(id).hasLabel(_label));
+// };
+
+def getOrCreateWhere = { props ->
+  def v = toElem(g.V().hasLabel("where").has("name", props["name"]));
+  if(v == null) {
+    v = graph.addVertex("where");
+    setProps(v, props, ["name"]);
+  }
+  return v;
+};
+
 def addWhen = globals["addWhen"] = { props ->
-  def v = graph.addVertex(label, "when");
+  def v = graph.addVertex("when");
   setProps(v, props, ["instant", "is_time_explicit", "time_zone"]);
   return v;
 };
 
 def addWhat = globals["addWhat"] = { props ->
-  def v = graph.addVertex(label, "what");
+  def v = graph.addVertex("what");
   setProps(v, props, ["title", "body", "created_at", "updated_at", "tags"])
   if(props["when"] != null) {
     def v_from = addWhen(props["when"]["from"]);
@@ -70,6 +95,10 @@ def addWhat = globals["addWhat"] = { props ->
     v.addEdge("when_from", v_from);
     v.addEdge("when_to", v_to);
   }
+  props["wheres"].each { where_prop ->
+    def where_v = getOrCreateWhere(where_prop);
+    v.addEdge("where", where_v);
+  };
   return v;
 };
 
