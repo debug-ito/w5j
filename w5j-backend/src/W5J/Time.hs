@@ -6,13 +6,17 @@
 -- This module is intended to hide the implementation specific to
 -- 'TimeInstant' type.
 module W5J.Time
-       ( TimeInstant,
-         TimeZone,
+       ( -- * TimeInstant
+         TimeInstant,
          zeroTime,
          currentTime,
          toEpochMsec,
          fromEpochMsec,
-         utcTimeZone
+         utcTimeZone,
+         -- * TimeZone
+         TimeZone,
+         tzToString,
+         tzFromString
        ) where
 
 import Data.UnixTime
@@ -21,6 +25,7 @@ import Data.UnixTime
   )
 import Data.Time.LocalTime (TimeZone)
 import qualified Data.Time.LocalTime as LocalTime
+import qualified Data.Time.Format as TimeFormat
 import Foreign.C.Types (CTime(..))
 
 -- | A time instant, without knowledge of any calendar systems or time
@@ -50,3 +55,9 @@ fromEpochMsec ems = TimeInstant
 
 utcTimeZone :: TimeZone
 utcTimeZone = LocalTime.utc
+
+tzToString :: TimeZone -> String
+tzToString = TimeFormat.formatTime TimeFormat.defaultTimeLocale "%z"
+
+tzFromString :: String -> Maybe TimeZone
+tzFromString = TimeFormat.parseTimeM True TimeFormat.defaultTimeLocale "%Z"
