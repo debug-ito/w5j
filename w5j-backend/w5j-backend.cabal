@@ -25,10 +25,10 @@ library
                         W5J.Where,
                         W5J.Interval,
                         W5J.Time,
+                        W5J.Aeson,
                         W5J.DB.TinkerPop
   other-modules:        W5J.DB.TinkerPop.Error,
-                        W5J.DB.TinkerPop.Parse,
-                        W5J.Aeson
+                        W5J.DB.TinkerPop.Parse
   build-depends:        base,
                         text,
                         time,
@@ -56,11 +56,13 @@ test-suite spec
   ghc-options:          -Wall -fno-warn-unused-imports "-with-rtsopts=-M512m"
   main-is:              Spec.hs
   -- default-extensions:   
-  -- other-extensions:     
-  other-modules:        W5J.TimeSpec
-  build-depends:        base, w5j-backend,
+  other-extensions:     QuasiQuotes, OverloadedStrings
+  other-modules:        W5J.TimeSpec,
+                        W5J.AesonSpec
+  build-depends:        base, w5j-backend, aeson,
                         hspec,
-                        QuickCheck
+                        QuickCheck,
+                        heredoc
 
 source-repository head
   type:                 git
