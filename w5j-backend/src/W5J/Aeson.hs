@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
 -- |
 -- Module: W5J.Aeson
 -- Description: standard JSON representation of data types
@@ -6,21 +6,33 @@
 --
 -- 
 module W5J.Aeson
-       ( AInterval(..),
+       ( -- * When
+         AWhen,
+         toAWhen,
+         fromAWhen,
+         -- * basics
+         AInterval(..),
          ATimeInstant(..),
          ATimeZone(..)
        ) where
 
 import Control.Applicative ((<$>), (<*>), empty)
-import Data.Aeson (ToJSON(..), FromJSON(..), object, (.:), Value(..))
+import Data.Aeson
+  ( ToJSON(..), FromJSON(..), object, (.:), Value(..),
+    genericToEncoding, genericParseJSON
+  )
+import qualified Data.Aeson.Types as AesonType
+import GHC.Generics (Generic)
 
 import W5J.Interval (Interval, inf, sup, (...))
 import W5J.Time
   ( TimeInstant, toEpochMsec, fromEpochMsec,
     TimeZone, tzToString, tzFromString
   )
+import W5J.When (When(..))
 
 newtype AInterval a = AInterval (Interval a)
+                    deriving (Eq,Show,Ord)
 
 instance ToJSON a => ToJSON (AInterval a) where
   toJSON (AInterval int) = object [ ("from", toJSON $ inf int),
@@ -35,6 +47,7 @@ instance (FromJSON a, Ord a) => FromJSON (AInterval a) where
   parseJSON _ = empty
 
 newtype ATimeInstant = ATimeInstant TimeInstant
+                     deriving (Eq,Ord,Show)
 
 instance ToJSON ATimeInstant where
   toJSON (ATimeInstant t) = toJSON $ toEpochMsec t
@@ -44,9 +57,35 @@ instance FromJSON ATimeInstant where
 
 
 newtype ATimeZone = ATimeZone TimeZone
+                  deriving (Eq,Ord,Show)
 
 instance ToJSON ATimeZone where
   toJSON (ATimeZone tz) = toJSON $ tzToString tz
 
 instance FromJSON ATimeZone where
   parseJSON v = (maybe empty (return . ATimeZone) . tzFromString) =<< parseJSON v
+
+aesonOpt :: AesonType.Options
+aesonOpt = AesonType.defaultOptions
+           { AesonType.fieldLabelModifier = tail
+           }
+
+data AWhen =
+  AWhen
+  { _instant :: !ATimeInstant,
+    _is_time_explicit :: !Bool,
+    _time_zone :: !ATimeZone
+  }
+  deriving (Eq,Show,Generic)
+
+instance ToJSON AWhen where
+  toEncoding = genericToEncoding aesonOpt
+
+instance FromJSON AWhen where
+  parseJSON = genericParseJSON aesonOpt
+
+toAWhen :: When -> AWhen
+toAWhen (When a b c) = AWhen (ATimeInstant a) b (ATimeZone c)
+
+fromAWhen :: AWhen -> When
+fromAWhen (AWhen (ATimeInstant a) b (ATimeZone c)) = When a b c
