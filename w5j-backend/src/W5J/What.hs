@@ -29,7 +29,7 @@ data What =
   What
   { whatId :: !WhatID,
     whatTitle :: !Text,
-    whatTime :: !(Maybe (Interval When)),
+    whatWhen :: !(Maybe (Interval When)),
     -- ^ optional time interval of the topic. For example, if the
     -- topic is an event, it is the interval during which the event is
     -- being held.

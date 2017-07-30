@@ -70,7 +70,7 @@ addWhat' conn what =
                  ("body", toJSON $ whatBody what),
                  ("created_at", toJSON $ toEpochMsec $ whatCreatedAt what),
                  ("updated_at", toJSON $ toEpochMsec $ whatUpdatedAt what),
-                 ("when", toJSON $ fmap intervalVal $ whatTime what),
+                 ("when", toJSON $ fmap intervalVal $ whatWhen what),
                  ("tags", toJSON $ whatTags what)
                ]
     intervalVal int = Aeson.object
@@ -178,7 +178,7 @@ addWhatSentences what =
              ]
   where
     when_sentences =
-      case whatTime what of
+      case whatWhen what of
        Nothing -> return ""
        Just int_when ->
          seqGremlin [ fmap (receiveBy "vwhen_from") $ addWhenSentence $ inf int_when,

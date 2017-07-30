@@ -20,8 +20,8 @@ mainWithConn conn = do
   where
     what cur_when = What { whatId = 0,
                            whatTitle = "whaaat title",
-                           whatTime = Just (cur_when ... cur_when),
-                           -- whatTime = Nothing,
+                           whatWhen = Just (cur_when ... cur_when),
+                           -- whatWhen = Nothing,
                            whatWheres = [],
                            whatBody = "whaat body",
                            whatTags = ["foo", "bar", "buzz", "foo"],
