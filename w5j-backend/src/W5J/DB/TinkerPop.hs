@@ -9,6 +9,7 @@ module W5J.DB.TinkerPop
        ( Connection,
          withConnection,
          addWhat,
+         addWhat',
          updateWhat,
          getWhatById,
          deleteWhat
@@ -17,6 +18,7 @@ module W5J.DB.TinkerPop
 import Control.Monad.Trans.State (State)
 import qualified Control.Monad.Trans.State as State
 import Data.Aeson (ToJSON(toJSON), Value)
+import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import Data.Monoid ((<>), mconcat)
 import Data.Text (pack, Text)
@@ -56,6 +58,34 @@ withConnection = TP.run
 -- - https://groups.google.com/forum/#!topic/gremlin-users/S4T9yOfHlV4
 -- - http://tinkerpop.apache.org/docs/3.0.1-incubating/#sessions
 
+addWhat' :: Connection -> What -> IO (WhatID)
+addWhat' conn what =
+  parseResult =<< toGremlinError =<< TP.submit conn gremlin (Just binds)
+  where
+    (gremlin, binds) = runGBuilder $ do
+      p <- fmap place $ newPlaceHolder what_val
+      return ("addWhat(" <> p <> ").id()")
+    what_val = Aeson.object
+               [ ("title", toJSON $ whatTitle what),
+                 ("body", toJSON $ whatBody what),
+                 ("created_at", toJSON $ toEpochMsec $ whatCreatedAt what),
+                 ("updated_at", toJSON $ toEpochMsec $ whatUpdatedAt what),
+                 ("when", toJSON $ fmap intervalVal $ whatTime what)
+               ]
+    intervalVal int = Aeson.object
+                      [ ("from", whenVal $ inf $ int),
+                        ("to", whenVal $ sup $ int)
+                      ]
+    whenVal wh = Aeson.object
+                 [ ("instant", toJSON $ toEpochMsec $ whenInstant wh),
+                   ("is_time_explicit", toJSON $ whenIsTimeExplicit wh),
+                   ("time_zone", toJSON $ dummy_tz) -- TODO
+                 ]
+    dummy_tz :: Text
+    dummy_tz = "DUMMY_TZ"
+    parseResult [] = parseError "No element in the result."
+    parseResult (ret : _) = ioFromJSON ret
+    
 
 -- | Add a new 'What' vertex into the DB.
 addWhat :: Connection
@@ -155,6 +185,8 @@ addWhatSentences what =
                       addEdgeSentence "vwhat" "vwhen_from" "when_from",
                       addEdgeSentence "vwhat" "vwhen_to" "when_to"
                     ]
+    -- When is another vertex, but it should be handled in a single
+    -- transaction with When vertex.
     props = [ ("title", toJSON $ whatTitle what),
               ("body", toJSON $ whatBody what),
               ("created_at", toJSON $ toEpochMsec $ whatCreatedAt what),
