@@ -4,7 +4,11 @@
 -- Description: standard JSON representation of data types
 -- Maintainer: Toshio Ito <debug.ito@gmail.com>
 --
--- 
+-- These JSON representations are used by the frontend <-> backend
+-- interface (both direction) and backend -> gremlin interface
+-- (one-way).
+--
+-- For backend <- gremlin interface, see "W5J.DB.TinkerPop.Parse".
 module W5J.Aeson
        ( -- * What
          AWhat,
