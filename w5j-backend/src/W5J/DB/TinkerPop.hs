@@ -9,7 +9,6 @@ module W5J.DB.TinkerPop
        ( Connection,
          withConnection,
          addWhat,
-         addWhat',
          updateWhat,
          getWhatById,
          deleteWhat
@@ -59,36 +58,26 @@ withConnection = TP.run
 -- - https://groups.google.com/forum/#!topic/gremlin-users/S4T9yOfHlV4
 -- - http://tinkerpop.apache.org/docs/3.0.1-incubating/#sessions
 
-addWhat' :: Connection -> What -> IO (WhatID)
-addWhat' conn what =
-  parseResult =<< toGremlinError =<< TP.submit conn gremlin (Just binds)
-  where
-    (gremlin, binds) = runGBuilder $ do
-      p <- fmap place $ newPlaceHolder what_val
-      return ("addWhat(" <> p <> ").id()")
-    what_val = Aeson.toJSON $ toAWhat what
-    parseResult [] = parseError "No element in the result."
-    parseResult (ret : _) = ioFromJSON ret
-    
-
 -- | Add a new 'What' vertex into the DB.
 addWhat :: Connection
         -> What
         -- ^ 'What' vertex to add. 'whatId', 'whatCreatedAt' and
         -- 'whatUpdatedAt' fields are ignored, and set automatically.
         -> IO (WhatID)
-        -- ^ newly created ID for 'whatId' field.
 addWhat conn what = do
   cur_time <- currentTime
-  let (gremlin, binds) = runGBuilder $ addWhatSentences $ setCurrentTime cur_time what
+  let (gremlin, binds) = getGremlin $ setCurrentTime cur_time what
   parseResult =<< toGremlinError =<< TP.submit conn gremlin (Just binds)
   where
     setCurrentTime t w = w { whatCreatedAt = t,
                              whatUpdatedAt = t
                            }
+    getGremlin w = runGBuilder $ do
+      p <- fmap place $ newPlaceHolder $ Aeson.toJSON $ toAWhat w
+      return ("addWhat(" <> p <> ").id()")
     parseResult [] = parseError "No element in the result."
     parseResult (ret : _) = ioFromJSON ret
-
+    
 -- | Update an existing 'What' vertex specified by the 'whatId' field.
 updateWhat :: Connection
            -> What
@@ -153,43 +142,6 @@ deleteWhat = undefined
 -- TODO. how should we treat other vertices connected (directly or
 -- non-directly) connected to the deleted vertex?
 
-addWhatSentences :: What -> GBuilder Text
-addWhatSentences what =
-  seqGremlin [ fmap (receiveBy "vwhat") $ addVertexSentence "what" props,
-               when_sentences,
-               return "vwhat.id()"
-             ]
-  where
-    when_sentences =
-      case whatWhen what of
-       Nothing -> return ""
-       Just int_when ->
-         seqGremlin [ fmap (receiveBy "vwhen_from") $ addWhenSentence $ inf int_when,
-                      fmap (receiveBy "vwhen_to") $ addWhenSentence $ sup int_when,
-                      addEdgeSentence "vwhat" "vwhen_from" "when_from",
-                      addEdgeSentence "vwhat" "vwhen_to" "when_to"
-                    ]
-    -- When is another vertex, but it should be handled in a single
-    -- transaction with When vertex.
-    props = [ ("title", toJSON $ whatTitle what),
-              ("body", toJSON $ whatBody what),
-              ("created_at", toJSON $ toEpochMsec $ whatCreatedAt what),
-              ("updated_at", toJSON $ toEpochMsec $ whatUpdatedAt what)
-            ]
-            ++ (map (\t -> ("tags", toJSON t)) $ whatTags what)
-
-receiveBy :: Text -> Text -> Text
-receiveBy var_name gremlin = var_name <> " = " <> gremlin
-
-addWhenSentence :: When -> GBuilder Text
-addWhenSentence wh = addVertexSentence "when" props
-  where
-    props = [ ("instant", toJSON $ toEpochMsec $ whenInstant wh),
-              ("is_time_explicit", toJSON $ whenIsTimeExplicit wh),
-              ("time_zone", toJSON $ dummy_tz) -- TODO
-            ]
-    dummy_tz :: String
-    dummy_tz = "DUMMY_TZ"
 
 type PlaceHolderIndex = Int
 
@@ -210,38 +162,8 @@ runGBuilder gbuilder = (ret, binding)
     (ret, (_, values)) = State.runState gbuilder (0, [])
     binding = HM.fromList $ zip (map place [0 ..]) $ values
 
-seqGremlin :: [GBuilder Text] -> GBuilder Text
-seqGremlin = fmap seqSentences . sequence
-  where
-    seqSentences = T.intercalate "; "
-
-addVertexSentence :: Text
-                  -- ^ vertex label
-                  -> [(Text, Value)]
-                  -- ^ properties
-                  -> GBuilder Text
-                  -- ^ gremlin script
-addVertexSentence label props = gremlin_addV
-  where
-    gremlin_addV = do
-      var_label <- fmap place $ newPlaceHolder $ toJSON $ label
-      props_gremlin <- fmap (mconcat . map pairToGremlin) $ mapM toVarNamePair props
-      return ("graph.addVertex(label, " <> var_label <> props_gremlin <> ")")
-    toVarNamePair (prop_name, prop_val) = do
-      var_name <- fmap place $ newPlaceHolder prop_val
-      return (prop_name, var_name)
-    pairToGremlin (prop_name, var_name) =
-      ", '" <> prop_name <> "', " <> var_name
-
-addEdgeSentence :: Text
-                -- ^ source vertex variable name
-                -> Text
-                -- ^ destination vertex variable name
-                -> Text
-                -- ^ edge label
-                -> GBuilder Text
-addEdgeSentence src dst label = add_sentence
-  where
-    add_sentence = do
-      var_label <- fmap place $ newPlaceHolder $ toJSON label
-      return (src <> ".addEdge(" <> var_label <> ", " <> dst <> ")")
+-- seqGremlin :: [GBuilder Text] -> GBuilder Text
+-- seqGremlin = fmap seqSentences . sequence
+--   where
+--     seqSentences = T.intercalate "; "
+-- 
