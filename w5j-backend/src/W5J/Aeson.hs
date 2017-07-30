@@ -7,14 +7,18 @@
 -- 
 module W5J.Aeson
        ( AInterval(..),
-         ATimeInstant(..)
+         ATimeInstant(..),
+         ATimeZone(..)
        ) where
 
 import Control.Applicative ((<$>), (<*>), empty)
 import Data.Aeson (ToJSON(..), FromJSON(..), object, (.:), Value(..))
 
 import W5J.Interval (Interval, inf, sup, (...))
-import W5J.Time (TimeInstant, toEpochMsec, fromEpochMsec)
+import W5J.Time
+  ( TimeInstant, toEpochMsec, fromEpochMsec,
+    TimeZone, tzToString, tzFromString
+  )
 
 newtype AInterval a = AInterval (Interval a)
 
@@ -37,3 +41,12 @@ instance ToJSON ATimeInstant where
 
 instance FromJSON ATimeInstant where
   parseJSON = fmap (ATimeInstant . fromEpochMsec) . parseJSON
+
+
+newtype ATimeZone = ATimeZone TimeZone
+
+instance ToJSON ATimeZone where
+  toJSON (ATimeZone tz) = toJSON $ tzToString tz
+
+instance FromJSON ATimeZone where
+  parseJSON v = (maybe empty (return . ATimeZone) . tzFromString) =<< parseJSON v
