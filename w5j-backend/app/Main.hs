@@ -22,6 +22,7 @@ mainWithConn conn = do
                            whatTitle = "whaaat title",
                            whatTime = Just (cur_when ... cur_when),
                            -- whatTime = Nothing,
+                           whatWheres = [],
                            whatBody = "whaat body",
                            whatTags = ["foo", "bar", "buzz", "foo"],
                            whatCreatedAt = zeroTime,
