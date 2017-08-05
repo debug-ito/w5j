@@ -71,7 +71,7 @@ instance FromJSON ATimeInstant where
   parseJSON = fmap (ATimeInstant . fromEpochMsec) . parseJSON
 
 
-newtype ATimeZone = ATimeZone TimeZone
+newtype ATimeZone = ATimeZone { unATimeZone :: TimeZone }
                   deriving (Eq,Ord,Show)
 
 instance ToJSON ATimeZone where
