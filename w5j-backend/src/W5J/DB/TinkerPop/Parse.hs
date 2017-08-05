@@ -11,7 +11,7 @@ module W5J.DB.TinkerPop.Parse
          ioFromJSON
        ) where
 
-import Control.Applicative ((<$>), empty)
+import Control.Applicative ((<$>), (<*>), empty)
 import Control.Monad (mapM, guard)
 import Data.Aeson
   ( FromJSON(parseJSON), Object, (.:), Value(Object,Array), fromJSON,
@@ -23,6 +23,7 @@ import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import Data.Text (Text)
 
+import W5J.Aeson (ATimeInstant(..), ATimeZone(..))
 import W5J.What (What(..))
 import W5J.When (When(..))
 import W5J.DB.TinkerPop.Error (parseError)
@@ -46,6 +47,9 @@ instance FromJSON a => FromJSON (PropertyOne a) where
      [head_v] -> return $ PropertyOne head_v
      _ -> empty
 
+propOne :: FromJSON a => Object -> Text -> Parser a
+propOne props name = unPropertyValue <$> unPropertyOne <$> (props .: name)
+
 -- | Property value of LIST/SET cardinality
 newtype PropertyMany a = PropertyMany { unPropertyMany :: [PropertyValue a] }
                        deriving (Show,Eq,Ord)
@@ -53,6 +57,9 @@ newtype PropertyMany a = PropertyMany { unPropertyMany :: [PropertyValue a] }
 instance FromJSON a => FromJSON (PropertyMany a) where
   parseJSON (Array arr) = fmap (PropertyMany . map PropertyValue) $ mapM parseJSON $ toList arr
   parseJSON _ = empty
+
+propMany :: FromJSON a => Object -> Text -> Parser [a]
+propMany props name = map unPropertyValue <$> unPropertyMany <$> (props .: name)
 
 type VertexID = Integer
 type VertexLabel = Text
@@ -74,14 +81,39 @@ parseVertex _ _ = empty
 -- | Aeson wrapper of 'What' vertex.
 newtype AVertexWhat = AVertexWhat What
 
+-- | Parse a TinkerPop vertex object into 'What'. Since the input is
+-- only one vertex, 'whatWhen' and 'whatWheres' are empty.
 instance FromJSON AVertexWhat where
-  parseJSON = undefined -- TODO
+  parseJSON = parseVertex f
+    where
+      f vid vlabel obj = do
+        let p1 :: FromJSON a => Text -> Parser a
+            p1 = propOne obj
+            ps = propMany obj
+        guard (vlabel == "what")
+        fmap AVertexWhat
+          $ What vid
+          <$> p1 "title"
+          <*> pure Nothing
+          <*> pure []
+          <*> p1 "body"
+          <*> ps "tags"
+          <*> (unATimeInstant <$> p1 "created_at")
+          <*> (unATimeInstant <$> p1 "updated_at")
+        
 
 -- | Aeson wrapper of 'When' vertex.
 newtype AVertexWhen = AVertexWhen When
 
 instance FromJSON AVertexWhen where
-  parseJSON = undefined -- TODO
+  parseJSON = parseVertex f
+    where
+      f _ vlabel obj = do
+        guard (vlabel == "when")
+        fmap AVertexWhen $ When
+          <$> (unATimeInstant <$> propOne obj "instant")
+          <*> propOne obj "is_time_explicit"
+          <*> (unATimeZone <$> propOne obj "time_zone")
 
 
 ioFromJSON :: FromJSON a => Value -> IO a
