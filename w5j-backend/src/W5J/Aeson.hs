@@ -11,15 +11,15 @@
 -- For backend <- gremlin interface, see "W5J.DB.TinkerPop.Parse".
 module W5J.Aeson
        ( -- * What
-         AWhat,
+         AWhat(..),
          toAWhat,
          fromAWhat,
          -- * When
-         AWhen,
+         AWhen(..),
          toAWhen,
          fromAWhen,
          -- * Where
-         AWhere,
+         AWhere(..),
          toAWhere,
          fromAWhere,
          -- * basics

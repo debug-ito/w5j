@@ -23,7 +23,7 @@ import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import Data.Text (Text)
 
-import W5J.Aeson (ATimeInstant(..), ATimeZone(..))
+import W5J.Aeson (AWhat(AWhat), AWhen(AWhen))
 import W5J.What (What(..))
 import W5J.When (When(..))
 import W5J.DB.TinkerPop.Error (parseError)
@@ -79,7 +79,7 @@ parseVertex upperParser (Object obj) = do
 parseVertex _ _ = empty
 
 -- | Aeson wrapper of 'What' vertex.
-newtype AVertexWhat = AVertexWhat What
+newtype AVertexWhat = AVertexWhat AWhat
 
 -- | Parse a TinkerPop vertex object into 'What'. Since the input is
 -- only one vertex, 'whatWhen' and 'whatWheres' are empty.
@@ -92,28 +92,28 @@ instance FromJSON AVertexWhat where
             ps = propMany obj
         guard (vlabel == "what")
         fmap AVertexWhat
-          $ What vid
+          $ AWhat vid
           <$> p1 "title"
           <*> pure Nothing
           <*> pure []
           <*> p1 "body"
           <*> ps "tags"
-          <*> (unATimeInstant <$> p1 "created_at")
-          <*> (unATimeInstant <$> p1 "updated_at")
+          <*> p1 "created_at"
+          <*> p1 "updated_at"
         
 
 -- | Aeson wrapper of 'When' vertex.
-newtype AVertexWhen = AVertexWhen When
+newtype AVertexWhen = AVertexWhen AWhen
 
 instance FromJSON AVertexWhen where
   parseJSON = parseVertex f
     where
       f _ vlabel obj = do
         guard (vlabel == "when")
-        fmap AVertexWhen $ When
-          <$> (unATimeInstant <$> propOne obj "instant")
+        fmap AVertexWhen $ AWhen
+          <$> propOne obj "instant"
           <*> propOne obj "is_time_explicit"
-          <*> (unATimeZone <$> propOne obj "time_zone")
+          <*> propOne obj "time_zone"
 
 
 ioFromJSON :: FromJSON a => Value -> IO a
