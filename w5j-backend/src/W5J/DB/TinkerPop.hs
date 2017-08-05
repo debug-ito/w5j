@@ -47,8 +47,8 @@ withConnection :: String
 withConnection = TP.run
 
 
--- We use multiple Gremlin sentences in a single request. This is
--- because by default each request is enclosed in a
+-- We (sometimes) use multiple Gremlin sentences in a single
+-- request. This is because by default each request is enclosed in a
 -- transaction. TinkerPop allows transactions over multiple requests
 -- by means of "session", but gremlin-haskell (as of 0.1.0.2) does not
 -- support it.
