@@ -23,9 +23,10 @@ import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import Data.Text (Text)
 
-import W5J.Aeson (AWhat(AWhat), AWhen(AWhen))
+import W5J.Aeson (AWhat(AWhat), AWhen(AWhen), AWhere(AWhere))
 import W5J.What (What(..))
 import W5J.When (When(..))
+import W5J.Where (Where(..))
 import W5J.DB.TinkerPop.Error (parseError)
 
 -- | The atomic (vertex) property value
@@ -114,6 +115,18 @@ instance FromJSON AVertexWhen where
           <$> propOne obj "instant"
           <*> propOne obj "is_time_explicit"
           <*> propOne obj "time_zone"
+
+-- | Aeson wrapper of 'Where' vertex.
+newtype AVertexWhere = AVertexWhere AWhere
+
+instance FromJSON AVertexWhere where
+  parseJSON = parseVertex f
+    where
+      f vid vlabel obj = do
+        guard (vlabel == "where")
+        fmap (AVertexWhere . AWhere)
+          $ Where (Just vid)
+          <$> propOne obj "name"
 
 
 ioFromJSON :: FromJSON a => Value -> IO a
