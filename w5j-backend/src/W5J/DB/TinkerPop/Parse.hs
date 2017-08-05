@@ -79,6 +79,17 @@ parseVertex upperParser (Object obj) = do
    _ -> empty
 parseVertex _ _ = empty
 
+
+-- | Aeson wrapper for complete 'What' data.
+newtype ACompleteWhat = ACompleteWhat What
+
+
+-- | Parse @[what_vertex, [when_from_vertices], [when_to_vertices], [where_vertices]]@
+-- into a complete 'What' data.
+instance FromJSON ACompleteWhat where
+  parseJSON = undefined -- TODO
+
+
 -- | Aeson wrapper of 'What' vertex.
 newtype AVertexWhat = AVertexWhat AWhat
 
