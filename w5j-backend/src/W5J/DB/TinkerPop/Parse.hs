@@ -6,8 +6,8 @@
 --
 -- 
 module W5J.DB.TinkerPop.Parse
-       ( AesonWhat(..),
-         AesonWhen(..),
+       ( AVertexWhat(..),
+         AVertexWhen(..),
          ioFromJSON
        ) where
 
@@ -71,16 +71,16 @@ parseVertex upperParser (Object obj) = do
    _ -> empty
 parseVertex _ _ = empty
 
--- | Wrapper of 'What' for aeson
-newtype AesonWhat = AesonWhat What
+-- | Aeson wrapper of 'What' vertex.
+newtype AVertexWhat = AVertexWhat What
 
-instance FromJSON AesonWhat where
+instance FromJSON AVertexWhat where
   parseJSON = undefined -- TODO
 
--- | Wrapper of 'When' for aeson
-newtype AesonWhen = AesonWhen When
+-- | Aeson wrapper of 'When' vertex.
+newtype AVertexWhen = AVertexWhen When
 
-instance FromJSON AesonWhen where
+instance FromJSON AVertexWhen where
   parseJSON = undefined -- TODO
 
 
