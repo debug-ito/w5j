@@ -66,7 +66,7 @@ newtype PropertyMany a = PropertyMany { unPropertyMany :: [PropertyValue a] }
                        deriving (Show,Eq,Ord)
 
 instance FromJSON a => FromJSON (PropertyMany a) where
-  parseJSON (Array arr) = fmap (PropertyMany . map PropertyValue) $ mapM parseJSON $ toList arr
+  parseJSON (Array arr) = fmap PropertyMany $ mapM parseJSON $ toList arr
   parseJSON _ = empty
 
 propMany :: FromJSON a => Object -> Text -> Parser [a]
