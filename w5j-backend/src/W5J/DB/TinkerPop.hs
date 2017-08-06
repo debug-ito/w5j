@@ -19,6 +19,7 @@ import qualified Control.Monad.Trans.State as State
 import Data.Aeson (ToJSON(toJSON), Value)
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
+import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>), mconcat)
 import Data.Text (pack, Text)
 import qualified Data.Text as T
@@ -28,7 +29,7 @@ import Database.TinkerPop.Types
 import qualified Database.TinkerPop as TP
 
 import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
-import W5J.DB.TinkerPop.Parse (ioFromJSON)
+import W5J.DB.TinkerPop.Parse (ioFromJSON, unACompleteWhat)
 import W5J.Aeson (toAWhat)
 import W5J.Interval (inf, sup)
 import W5J.Time (currentTime, toEpochMsec)
@@ -90,9 +91,10 @@ updateWhat = undefined
 -- | Get 'What' vertex with the given 'WhatID'.
 getWhatById :: Connection -> WhatID -> IO (Maybe What)
 getWhatById conn wid = do
-  ret <- toGremlinError =<< TP.submit conn gremlin (Just binds)
-  print ret
-  return Nothing -- TODO
+  mgot_val <- fmap (listToMaybe) $ toGremlinError =<< TP.submit conn gremlin (Just binds)
+  case mgot_val of
+   Nothing -> return Nothing
+   Just got_val -> fmap (Just . unACompleteWhat) $ ioFromJSON got_val
   where
     gremlin = "g.V(WID).hasLabel('what')"
               <> ".map({ v = it.get(); [__(v).valueMap().toList(), __(v).out('when_from').toList(), __(v).out('when_to').toList()] })"
