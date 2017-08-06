@@ -6,7 +6,8 @@
 --
 -- 
 module W5J.DB.TinkerPop.Parse
-       ( AVertexWhat(..),
+       ( ACompleteWhat(..),
+         AVertexWhat(..),
          AVertexWhen(..),
          ioFromJSON
        ) where
@@ -21,9 +22,14 @@ import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
+import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 
-import W5J.Aeson (AWhat(AWhat), AWhen(AWhen), AWhere(AWhere))
+import W5J.Aeson
+  ( AWhat(AWhat), AWhen(AWhen), AWhere(AWhere),
+    fromAWhat, fromAWhen, fromAWhere
+  )
+import W5J.Interval ((...))
 import W5J.What (What(..))
 import W5J.When (When(..))
 import W5J.Where (Where(..))
@@ -81,17 +87,31 @@ parseVertex _ _ = empty
 
 
 -- | Aeson wrapper for complete 'What' data.
-newtype ACompleteWhat = ACompleteWhat What
+newtype ACompleteWhat = ACompleteWhat { unACompleteWhat :: What }
 
 
 -- | Parse @[what_vertex, [when_from_vertices], [when_to_vertices], [where_vertices]]@
 -- into a complete 'What' data.
 instance FromJSON ACompleteWhat where
-  parseJSON = undefined -- TODO
+  parseJSON (Array arr') = do
+    let arr = toList arr'
+    guard (length arr == 3)
+    let [what_v, when_from_vs, when_to_vs, where_vs] = arr
+        getMWhen = fmap (fmap fromAWhen . listToMaybe . map unAVertexWhen) . parseJSON
+    what <- fmap (fromAWhat . unAVertexWhat) $ parseJSON what_v
+    mwhen_from <- getMWhen when_from_vs
+    mwhen_to <- getMWhen when_to_vs
+    wheres <- fmap (map (fromAWhere . unAVertexWhere)) $ parseJSON where_vs
+    let mwhen_interval = (...) <$> mwhen_from <*> mwhen_to
+    return $ ACompleteWhat $ what { whatWhen = mwhen_interval,
+                                    whatWheres = wheres
+                                  }
+  parseJSON _ = empty
+    
 
 
 -- | Aeson wrapper of 'What' vertex.
-newtype AVertexWhat = AVertexWhat AWhat
+newtype AVertexWhat = AVertexWhat { unAVertexWhat :: AWhat }
 
 -- | Parse a TinkerPop vertex object into 'What'. Since the input is
 -- only one vertex, 'whatWhen' and 'whatWheres' are empty.
@@ -115,7 +135,7 @@ instance FromJSON AVertexWhat where
         
 
 -- | Aeson wrapper of 'When' vertex.
-newtype AVertexWhen = AVertexWhen AWhen
+newtype AVertexWhen = AVertexWhen { unAVertexWhen :: AWhen }
 
 instance FromJSON AVertexWhen where
   parseJSON = parseVertex f
@@ -128,7 +148,7 @@ instance FromJSON AVertexWhen where
           <*> propOne obj "time_zone"
 
 -- | Aeson wrapper of 'Where' vertex.
-newtype AVertexWhere = AVertexWhere AWhere
+newtype AVertexWhere = AVertexWhere { unAVertexWhere :: AWhere }
 
 instance FromJSON AVertexWhere where
   parseJSON = parseVertex f
