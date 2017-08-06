@@ -97,7 +97,8 @@ getWhatById conn wid = do
    Just got_val -> fmap (Just . unACompleteWhat) $ ioFromJSON got_val
   where
     gremlin = "g.V(WID).hasLabel('what')"
-              <> ".map({ v = it.get(); [__(v).valueMap().toList(), __(v).out('when_from').toList(), __(v).out('when_to').toList()] })"
+              <> ".map({ v = it.get(); [__(v).valueMap().toList(), __(v).out('when_from').toList(), __(v).out('when_to').toList(), "
+              <>  "__(v).out('where').toList()]})"
     binds = HM.fromList [("WID", toJSON wid)]
 
 -- vertex propertyのvalueは必ずArrayに入っている。これでSETやLIST cardinalityを表現している。

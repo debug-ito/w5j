@@ -99,7 +99,7 @@ newtype ACompleteWhat = ACompleteWhat { unACompleteWhat :: What }
 instance FromJSON ACompleteWhat where
   parseJSON (Array arr') = do
     let arr = toList arr'
-    guard (length arr == 3)
+    guard (length arr == 4)
     let [what_v, when_from_vs, when_to_vs, where_vs] = arr
         getMWhen = fmap (fmap fromAWhen . listToMaybe . map unAVertexWhen) . parseJSON
     what <- fmap (fromAWhat . unAVertexWhat) $ parseJSON what_v
