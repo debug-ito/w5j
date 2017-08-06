@@ -6,10 +6,14 @@
 --
 -- 
 module W5J.DB.TinkerPop.Parse
-       ( ACompleteWhat(..),
+       ( -- * Main parsers
+         ACompleteWhat(..),
+         -- * Parsing utils
+         ioFromJSON,
+         -- * Basic parsers
          AVertexWhat(..),
          AVertexWhen(..),
-         ioFromJSON
+         AVertexWhere(..)
        ) where
 
 import Control.Applicative ((<$>), (<*>), empty)
