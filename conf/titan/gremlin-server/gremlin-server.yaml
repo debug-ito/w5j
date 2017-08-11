@@ -13,7 +13,7 @@ scriptEngines: {
   gremlin-groovy: {
     imports: [java.lang.Math],
     staticImports: [java.lang.Math.PI],
-    scripts: [conf/gremlin-server/index-test.groovy]},
+    scripts: [conf/gremlin-server/w5j_init.groovy]},
   nashorn: {
       imports: [java.lang.Math],
       staticImports: [java.lang.Math.PI]}}
