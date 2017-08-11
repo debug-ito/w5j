@@ -59,6 +59,8 @@ test-suite spec
   other-extensions:     QuasiQuotes, OverloadedStrings
   other-modules:        W5J.TimeSpec,
                         W5J.AesonSpec
+                        W5J.DB.TinkerPopSpec,
+                        W5J.DB.TinkerPop.TestUtil
   build-depends:        base, w5j-backend, aeson,
                         hspec,
                         QuickCheck,
