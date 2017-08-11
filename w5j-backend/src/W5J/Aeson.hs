@@ -115,12 +115,12 @@ newtype AWhere = AWhere Where
 
 instance ToJSON AWhere where
   toJSON (AWhere w) = object [ ("where_id", toJSON $ whereId w),
-                               ("name", toJSON $ whereName w)
+                               ("where_name", toJSON $ whereName w)
                              ]
 
 instance FromJSON AWhere where
   parseJSON (Object o) = fmap AWhere
-                         $ Where <$> (o .: "where_id") <*> (o .: "name")
+                         $ Where <$> (o .: "where_id") <*> (o .: "where_name")
   parseJSON _ = empty
 
 toAWhere :: Where -> AWhere

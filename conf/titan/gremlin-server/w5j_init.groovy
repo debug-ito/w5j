@@ -72,10 +72,10 @@ def toElem = { traversal ->
 // };
 
 def getOrCreateWhere = { props ->
-  def v = toElem(g.V().hasLabel("where").has("name", props["name"]));
+  def v = toElem(g.V().hasLabel("where").has("where_name", props["where_name"]));
   if(v == null) {
     v = graph.addVertex("where");
-    setProps(v, props, ["name"]);
+    setProps(v, props, ["where_name"]);
   }
   return v;
 };
