@@ -97,9 +97,12 @@ getWhatById conn wid = do
    Just got_val -> fmap (Just . unACompleteWhat) $ ioFromJSON got_val
   where
     gremlin = "g.V(WID).hasLabel('what')"
-              <> ".map({ v = it.get(); [v, __(v).out('when_from').toList(), __(v).out('when_to').toList(), "
-              <>  "__(v).out('where').toList()]})"
+              <> ".map({ getCompleteWhat(it.get()) })"
     binds = HM.fromList [("WID", toJSON wid)]
+
+-- TODO: addとgetがあればとりあえず作れる？もうちょっとクエリのバリエーションが必要か。
+-- そろそろGremlin Serverも巻き込んだテストを書くべき。どうしよう？
+
 
 -- vertex propertyのvalueは必ずArrayに入っている。これでSETやLIST cardinalityを表現している。
 -- when_fromやwhen_toエッジがない場合は後ろの2つのリストが空になる。なるほど。

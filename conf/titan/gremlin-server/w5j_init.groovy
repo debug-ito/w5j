@@ -102,5 +102,12 @@ def addWhat = globals["addWhat"] = { props ->
   return v;
 };
 
+def getCompleteWhat = globals["getCompleteWhat"] = { what_v ->
+  return [what_v,
+          __(what_v).out('when_from').toList(),
+          __(what_v).out('when_to').toList(), 
+          __(what_v).out('where').toList()];
+};
+
 // return bindings
 globals;
