@@ -21,6 +21,10 @@ expectJust Nothing = do
   expectationFailure "expecting Just, but got Nothing"
   undefined
 
+expectField :: a -> a -> (b -> b -> Expectation) -> (a -> b) -> Expectation
+expectField got expected assertion accessor =
+  assertion (accessor got) (accessor expected)
+
 spec :: Spec
 spec = withEnv $ describe "addWhat, getWhatById"
        $ it "should add and get What data" $ withCleanDB $ \conn -> do
@@ -28,8 +32,13 @@ spec = withEnv $ describe "addWhat, getWhatById"
          let input_what = what cur_when
          wid <- addWhat conn input_what
          got_what <- expectJust =<< getWhatById conn wid
-         whatTitle got_what `shouldBe` whatTitle input_what
-         -- TODO: 他のフィールドもテストする。あと、DBをクリアしないといけない。
+         let fieldEq :: (Eq a, Show a) => (What -> a) -> Expectation
+             fieldEq = expectField got_what input_what shouldBe
+         fieldEq whatTitle
+         fieldEq whatWhen
+         fieldEq whatWheres
+         fieldEq whatBody
+         fieldEq whatTags
   where
     what cur_when = What { whatId = 0,
                            whatTitle = "whaaat title",
