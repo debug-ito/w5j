@@ -11,9 +11,11 @@ module W5J.DB.TinkerPop
          addWhat,
          updateWhat,
          getWhatById,
-         deleteWhat
+         deleteWhat,
+         clearAll
        ) where
 
+import Control.Monad (void)
 import Control.Monad.Trans.State (State)
 import qualified Control.Monad.Trans.State as State
 import Data.Aeson (ToJSON(toJSON), Value)
@@ -147,6 +149,10 @@ deleteWhat :: Connection -> WhatID -> IO ()
 deleteWhat = undefined
 -- TODO. how should we treat other vertices connected (directly or
 -- non-directly) connected to the deleted vertex?
+
+-- | Clear all vertices and edges.
+clearAll :: Connection -> IO ()
+clearAll conn = void $ toGremlinError =<< TP.submit conn "g.V().drop()" Nothing
 
 
 type PlaceHolderIndex = Int
