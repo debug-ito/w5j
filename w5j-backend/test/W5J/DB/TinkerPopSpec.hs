@@ -1,10 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module W5J.DB.TinkerPopSpec (main,spec) where
 
+import Data.Maybe (fromJust)
 import Test.Hspec
 
 import W5J.Interval ((...), mapInterval)
-import W5J.Time (zeroTime, toEpochMsec, fromEpochMsec)
+import W5J.Time
+  ( zeroTime, toEpochMsec, fromEpochMsec,
+    tzToString, tzFromString
+  )
 import W5J.What (What(..))
 import W5J.When (When(..), currentUTCWhen)
 import W5J.Where (Where(..))
@@ -25,8 +29,10 @@ expectField :: a -> a -> (b -> b -> Expectation) -> (a -> b) -> Expectation
 expectField got expected assertion accessor =
   assertion (accessor got) (accessor expected)
 
-toMsecWhen :: When -> When
-toMsecWhen w = w { whenInstant = fromEpochMsec $ toEpochMsec $ whenInstant w}
+toWhenInDB :: When -> When
+toWhenInDB w = w { whenInstant = fromEpochMsec $ toEpochMsec $ whenInstant w,
+                   whenTimeZone = fromJust $ tzFromString $ tzToString $ whenTimeZone w
+                 }
 
 spec :: Spec
 spec = withEnv $ describe "addWhat, getWhatById"
@@ -38,7 +44,7 @@ spec = withEnv $ describe "addWhat, getWhatById"
          let fieldEq :: (Eq a, Show a) => (What -> a) -> Expectation
              fieldEq = expectField got_what (expectedWhat input_what) shouldBe
          fieldEq whatTitle
-         fieldEq whatWhen  -- TODO: whenの精度はmsec単位。
+         fieldEq whatWhen
          fieldEq whatWheres  -- TODO: whereはIDが埋められる
          fieldEq whatBody
          fieldEq whatTags
@@ -53,7 +59,7 @@ spec = withEnv $ describe "addWhat, getWhatById"
                            whatUpdatedAt = zeroTime
                          }
     expectedWhat input_what =
-      input_what { whatWhen = fmap (mapInterval toMsecWhen) $ whatWhen input_what
+      input_what { whatWhen = fmap (mapInterval toWhenInDB) $ whatWhen input_what
                  }
     wheres = [ Where Nothing "place 1",
                Where Nothing "place 999"
