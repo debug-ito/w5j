@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module W5J.DB.TinkerPopSpec (main,spec) where
 
+import Data.List (nub)
 import Data.Maybe (fromJust)
 import Test.Hspec
 
@@ -48,7 +49,7 @@ spec = withEnv $ describe "addWhat, getWhatById"
          fieldEq whatWhen
          expectField got_what exp_what (\gws ews -> mapM_ checkWheres $ zip gws ews) whatWheres
          fieldEq whatBody
-         fieldEq whatTags
+         expectField got_what exp_what shouldMatchList whatTags
   where
     what cur_when = What { whatId = 0,
                            whatTitle = "whaaat title",
@@ -60,7 +61,8 @@ spec = withEnv $ describe "addWhat, getWhatById"
                            whatUpdatedAt = zeroTime
                          }
     expectedWhat input_what =
-      input_what { whatWhen = fmap (mapInterval toWhenInDB) $ whatWhen input_what
+      input_what { whatWhen = fmap (mapInterval toWhenInDB) $ whatWhen input_what,
+                   whatTags = nub $ whatTags input_what
                  }
     wheres = [ Where Nothing "place 1",
                Where Nothing "place 999"
