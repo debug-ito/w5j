@@ -10,7 +10,7 @@ import W5J.When (currentUTCWhen)
 import W5J.Where (Where(..))
 import W5J.DB.TinkerPop (addWhat, getWhatById)
 
-import W5J.DB.TinkerPop.TestUtil (withEnv, withConn)
+import W5J.DB.TinkerPop.TestUtil (withEnv, withCleanDB)
 
 main :: IO ()
 main = hspec spec
@@ -23,13 +23,13 @@ expectJust Nothing = do
 
 spec :: Spec
 spec = withEnv $ describe "addWhat, getWhatById"
-       $ it "should add and get What data" $ withConn $ \conn -> do
+       $ it "should add and get What data" $ withCleanDB $ \conn -> do
          cur_when <- currentUTCWhen
          let input_what = what cur_when
          wid <- addWhat conn input_what
          got_what <- expectJust =<< getWhatById conn wid
          whatTitle got_what `shouldBe` whatTitle input_what
-         -- TODO
+         -- TODO: 他のフィールドもテストする。あと、DBをクリアしないといけない。
   where
     what cur_when = What { whatId = 0,
                            whatTitle = "whaaat title",
