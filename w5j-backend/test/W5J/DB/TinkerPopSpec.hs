@@ -41,11 +41,12 @@ spec = withEnv $ describe "addWhat, getWhatById"
          let input_what = what cur_when
          wid <- addWhat conn input_what
          got_what <- expectJust =<< getWhatById conn wid
-         let fieldEq :: (Eq a, Show a) => (What -> a) -> Expectation
-             fieldEq = expectField got_what (expectedWhat input_what) shouldBe
+         let exp_what = expectedWhat input_what
+             fieldEq :: (Eq a, Show a) => (What -> a) -> Expectation
+             fieldEq = expectField got_what exp_what shouldBe
          fieldEq whatTitle
          fieldEq whatWhen
-         fieldEq whatWheres  -- TODO: whereはIDが埋められる
+         expectField got_what exp_what (\gws ews -> mapM_ checkWheres $ zip gws ews) whatWheres
          fieldEq whatBody
          fieldEq whatTags
   where
@@ -64,4 +65,5 @@ spec = withEnv $ describe "addWhat, getWhatById"
     wheres = [ Where Nothing "place 1",
                Where Nothing "place 999"
              ]
+    checkWheres (got, expected) = whereName got `shouldBe` whereName expected
 
