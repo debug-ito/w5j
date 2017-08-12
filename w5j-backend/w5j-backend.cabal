@@ -61,7 +61,7 @@ test-suite spec
                         W5J.AesonSpec
                         W5J.DB.TinkerPopSpec,
                         W5J.DB.TinkerPop.TestUtil
-  build-depends:        base, w5j-backend, aeson,
+  build-depends:        base, w5j-backend, aeson, text,
                         hspec,
                         QuickCheck,
                         heredoc

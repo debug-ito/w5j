@@ -3,6 +3,7 @@ module W5J.DB.TinkerPopSpec (main,spec) where
 
 import Data.List (nub)
 import Data.Maybe (fromJust)
+import Data.Text (Text)
 import Test.Hspec
 
 import W5J.Interval ((...), mapInterval)
@@ -35,6 +36,9 @@ toWhenInDB w = w { whenInstant = fromEpochMsec $ toEpochMsec $ whenInstant w,
                    whenTimeZone = fromJust $ tzFromString $ tzToString $ whenTimeZone w
                  }
 
+whatWhereNames :: What -> [Text]
+whatWhereNames = map whereName . whatWheres
+
 spec :: Spec
 spec = withEnv $ describe "addWhat, getWhatById"
        $ it "should add and get What data" $ withCleanDB $ \conn -> do
@@ -47,7 +51,7 @@ spec = withEnv $ describe "addWhat, getWhatById"
              fieldEq = expectField got_what exp_what shouldBe
          fieldEq whatTitle
          fieldEq whatWhen
-         expectField got_what exp_what (\gws ews -> mapM_ checkWheres $ zip gws ews) whatWheres
+         expectField got_what exp_what shouldMatchList whatWhereNames
          fieldEq whatBody
          expectField got_what exp_what shouldMatchList whatTags
   where
@@ -67,5 +71,4 @@ spec = withEnv $ describe "addWhat, getWhatById"
     wheres = [ Where Nothing "place 1",
                Where Nothing "place 999"
              ]
-    checkWheres (got, expected) = whereName got `shouldBe` whereName expected
 
