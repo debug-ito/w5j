@@ -27,8 +27,8 @@ expectJust Nothing = do
   expectationFailure "expecting Just, but got Nothing"
   undefined
 
-expectField :: a -> a -> (b -> b -> Expectation) -> (a -> b) -> Expectation
-expectField got expected assertion accessor =
+expectField :: (b -> b -> Expectation) -> a -> a -> (a -> b) -> Expectation
+expectField assertion got expected accessor =
   assertion (accessor got) (accessor expected)
 
 toWhenInDB :: When -> When
@@ -48,12 +48,14 @@ spec = withEnv $ describe "addWhat, getWhatById"
          got_what <- expectJust =<< getWhatById conn wid
          let exp_what = expectedWhat input_what
              fieldEq :: (Eq a, Show a) => (What -> a) -> Expectation
-             fieldEq = expectField got_what exp_what shouldBe
+             fieldEq = expectField shouldBe got_what exp_what
+             fieldMatchList :: (Eq a, Show a) => (What -> [a]) -> Expectation
+             fieldMatchList = expectField shouldMatchList got_what exp_what
          fieldEq whatTitle
          fieldEq whatWhen
-         expectField got_what exp_what shouldMatchList whatWhereNames
+         fieldMatchList whatWhereNames
          fieldEq whatBody
-         expectField got_what exp_what shouldMatchList whatTags
+         fieldMatchList whatTags
   where
     what cur_when = What { whatId = 0,
                            whatTitle = "whaaat title",
