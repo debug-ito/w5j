@@ -8,6 +8,8 @@
 module W5J.DB.TinkerPop.GBuilder
        ( -- * Types
          GBuilder,
+         Gremlin,
+         Binding,
          PlaceHolderVariable,
          -- * Actions
          newPlaceHolder,
@@ -22,7 +24,7 @@ import Data.Aeson (Value, ToJSON(toJSON))
 import Data.Monoid ((<>))
 import qualified Data.HashMap.Strict as HM
 import Data.Text (Text, pack)
-import Database.TinkerPop.Types (Binding, Connection)
+import Database.TinkerPop.Types (Binding, Connection, Gremlin)
 import qualified Database.TinkerPop as TP
 
 type PlaceHolderIndex = Int
@@ -46,7 +48,7 @@ runGBuilder gbuilder = (ret, binding)
     (ret, (_, values)) = State.runState gbuilder (0, [])
     binding = HM.fromList $ zip (map place [0 ..]) $ values
 
-submitGBuilder :: Connection -> GBuilder Text -> IO (Either String [Value])
+submitGBuilder :: Connection -> GBuilder Gremlin -> IO (Either String [Value])
 submitGBuilder conn gbuilder = TP.submit conn gremlin (Just binding)
   where
     (gremlin, binding) = runGBuilder gbuilder
