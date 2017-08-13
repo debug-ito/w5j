@@ -10,9 +10,10 @@ module W5J.DB.TinkerPop.Query.Common
          Query(..),
          buildQueryWith,
          -- * QRange
-         QRange(..),
-         rangeMin,
-         rangeMax,
+         QRange,
+         qRange,
+         qRangeMin,
+         qRangeMax,
          -- * QCondTree
          QCondTree(..),
          -- * QOrder
@@ -29,11 +30,14 @@ import W5J.DB.TinkerPop.GBuilder (GBuilder, Gremlin, newPlaceHolder)
 newtype QRange = QRange { unQRange :: Interval Int }
                deriving (Eq,Show,Ord)
 
-rangeMin :: QRange -> Int
-rangeMin = inf . unQRange
+qRange :: Int -> Int -> QRange
+qRange a b = QRange (a ... b)
 
-rangeMax :: QRange -> Int
-rangeMax = sup . unQRange
+qRangeMin :: QRange -> Int
+qRangeMin = inf . unQRange
+
+qRangeMax :: QRange -> Int
+qRangeMax = sup . unQRange
 
 
 -- | condition tree. type @c@ is the leaf condition type.
@@ -75,8 +79,8 @@ buildQueryWith buildCond buildOBy query = do
   return (gremlin_cond <> ".order()" <> gremlin_orderby <> gremlin_range)
   where
     buildRange range = do
-      v_min <- newPlaceHolder $ rangeMin range
-      v_max <- newPlaceHolder $ rangeMax range
+      v_min <- newPlaceHolder $ qRangeMin range
+      v_max <- newPlaceHolder $ qRangeMax range
       return (".range(" <> v_min <> ", " <> v_max <> ")")
     buildBinaryCond method a b = do
       ga <- buildCondTree a
