@@ -37,7 +37,8 @@ rangeMax = sup . unQRange
 
 
 -- | condition tree. type @c@ is the leaf condition type.
-data QCondTree c = QCondLeaf c
+data QCondTree c = QCondTrue
+                 | QCondLeaf c
                  | QCondAnd (QCondTree c) (QCondTree c)
                  | QCondOr (QCondTree c) (QCondTree c)
                  | QCondNot (QCondTree c)
@@ -87,3 +88,4 @@ buildQueryWith buildCond buildOBy query = do
       ga <- buildCondTree a
       return (".not(__" <> ga <> ")")
     buildCondTree (QCondLeaf c) = buildCond c
+    buildCondTree (QCondTrue) = return ".identity()"
