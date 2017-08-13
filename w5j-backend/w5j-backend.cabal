@@ -19,8 +19,7 @@ library
   ghc-options:          -Wall -fno-warn-unused-imports
   -- default-extensions:   
   other-extensions:     OverloadedStrings, DeriveGeneric
-  exposed-modules:      W5J.GremlinTest,
-                        W5J.What,
+  exposed-modules:      W5J.What,
                         W5J.When,
                         W5J.Where,
                         W5J.Interval,
