@@ -16,8 +16,6 @@ module W5J.DB.TinkerPop
        ) where
 
 import Control.Monad (void)
-import Data.Aeson (ToJSON(toJSON))
-import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>), mconcat)
 import Database.TinkerPop.Types
@@ -26,7 +24,7 @@ import Database.TinkerPop.Types
 import qualified Database.TinkerPop as TP
 
 import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
-import W5J.DB.TinkerPop.GBuilder (runGBuilder, newPlaceHolder)
+import W5J.DB.TinkerPop.GBuilder (newPlaceHolder, submitGBuilder)
 import W5J.DB.TinkerPop.Parse (ioFromJSON, unACompleteWhat)
 import W5J.Aeson (toAWhat)
 import W5J.Interval (inf, sup)
@@ -65,13 +63,12 @@ addWhat :: Connection
         -> IO (WhatID)
 addWhat conn what = do
   cur_time <- currentTime
-  let (gremlin, binds) = getGremlin $ setCurrentTime cur_time what
-  parseResult =<< toGremlinError =<< TP.submit conn gremlin (Just binds)
+  parseResult =<< toGremlinError =<< (submitGBuilder conn $ getGBuilder $ setCurrentTime cur_time what)
   where
     setCurrentTime t w = w { whatCreatedAt = t,
                              whatUpdatedAt = t
                            }
-    getGremlin w = runGBuilder $ do
+    getGBuilder w = do
       p <- newPlaceHolder $ toAWhat w
       return ("addWhat(" <> p <> ").id()")
     parseResult [] = parseError "No element in the result."
@@ -89,14 +86,14 @@ updateWhat = undefined
 -- | Get 'What' vertex with the given 'WhatID'.
 getWhatById :: Connection -> WhatID -> IO (Maybe What)
 getWhatById conn wid = do
-  mgot_val <- fmap (listToMaybe) $ toGremlinError =<< TP.submit conn gremlin (Just binds)
+  mgot_val <- fmap (listToMaybe) $ toGremlinError =<< submitGBuilder conn gbuilder
   case mgot_val of
    Nothing -> return Nothing
    Just got_val -> fmap (Just . unACompleteWhat) $ ioFromJSON got_val
   where
-    gremlin = "g.V(WID).hasLabel('what')"
-              <> ".map({ getCompleteWhat(it.get()) })"
-    binds = HM.fromList [("WID", toJSON wid)]
+    gbuilder = do
+      v_wid <- newPlaceHolder wid
+      return ("g.V(" <> v_wid <> ").hasLabel('what').map({ getCompleteWhat(it.get()) })")
 
 -- | Delete a 'What' vertex.
 deleteWhat :: Connection -> WhatID -> IO ()
