@@ -74,3 +74,5 @@ spec = withEnv $ describe "addWhat, getWhatById"
                Where Nothing "place 999"
              ]
 
+
+-- TODO: queryWhatのテスト。そのまえにTinkerPopを(What専門の)サブモジュールに分割すべきか？

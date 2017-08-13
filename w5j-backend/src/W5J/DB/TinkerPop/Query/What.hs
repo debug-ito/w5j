@@ -27,6 +27,8 @@ data QOrderBy = QOrderByWhen
 -- | condition specifier for What data
 data QCond = QCondTerm Text
              -- ^ free term search entry for title, body, tags.
+           | QCondTag Text
+             -- ^ exact match for tags.
              deriving (Show,Eq,Ord)
 
 buildQuery :: QueryWhat -> GBuilder Gremlin
@@ -37,6 +39,9 @@ buildQuery = buildQueryWith buildCond buildOrder
       return (".or(__.has('title', textContains(" <> vt <> "))"
               <> ", __.has('body', textContains(" <> vt <> "))"
               <> ", __.has('tags', eq(" <> vt <> ")))")
+    buildCond (QCondTag t) = do
+      vt <- newPlaceHolder t
+      return (".has('tags', eq(" <> vt <> "))")
     buildOrder order QOrderByWhen =
       return (byStep "when_from" <> byStep "when_to")
       where
