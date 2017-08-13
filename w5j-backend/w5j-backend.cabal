@@ -27,12 +27,12 @@ library
                         W5J.Aeson,
                         W5J.DB.TinkerPop.IO.Connection,
                         W5J.DB.TinkerPop.IO.What,
-                        W5J.DB.TinkerPop.IO.Misc
-  other-modules:        W5J.DB.TinkerPop.Error,
-                        W5J.DB.TinkerPop.Parse,
-                        W5J.DB.TinkerPop.GBuilder,
+                        W5J.DB.TinkerPop.IO.Misc,
                         W5J.DB.TinkerPop.Query.Common,
                         W5J.DB.TinkerPop.Query.What
+  other-modules:        W5J.DB.TinkerPop.Error,
+                        W5J.DB.TinkerPop.Parse,
+                        W5J.DB.TinkerPop.GBuilder
   build-depends:        base,
                         text,
                         time,

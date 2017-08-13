@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module W5J.DB.TinkerPop.IO.WhatSpec (main,spec) where
 
+import Control.Monad (mapM_)
 import Data.List (nub)
 import Data.Maybe (fromJust)
 import Data.Text (Text)
@@ -14,7 +15,12 @@ import W5J.Time
 import W5J.What (What(..))
 import W5J.When (When(..), currentUTCWhen)
 import W5J.Where (Where(..))
-import W5J.DB.TinkerPop.IO.What (addWhat, getWhatById)
+import W5J.DB.TinkerPop.IO.What (addWhat, getWhatById, queryWhat)
+import W5J.DB.TinkerPop.Query.Common
+  ( Query(..), QCondTree(..), QOrder(..), QRange, qRange
+  )
+import W5J.DB.TinkerPop.Query.What (QOrderBy(..), QCond(..))
+
 
 import W5J.DB.TinkerPop.TestUtil (withEnv, withCleanDB)
 
@@ -43,6 +49,7 @@ spec :: Spec
 spec = do
   withEnv $ do
     spec_add_get
+    spec_queryWhat
 
 spec_add_get :: SpecWith (String, Int)
 spec_add_get = describe "addWhat, getWhatById" $ do
@@ -79,5 +86,23 @@ spec_add_get = describe "addWhat, getWhatById" $ do
                Where Nothing "place 999"
              ]
 
--- TODO: queryWhatのテスト。
+spec_queryWhat :: SpecWith (String, Int)
+spec_queryWhat = describe "queryWhat" $ do
+  specify "order" $ withCleanDB $ \conn -> do
+    addSampleWhats conn
+    let q = Query { queryCond = QCondTrue,
+                    queryOrder = QOrderAsc,
+                    queryOrderBy = QOrderByWhen,
+                    queryRange = qRange 0 3
+                  }
+    got <- queryWhat conn q
+    True `shouldBe` False -- TODO
+  where
+    addSampleWhats conn = mapM_ (addWhat conn) sampleWhats
+    sampleWhats :: [What]
+    sampleWhats =
+      [ -- TODO
+      ]
+
+    
 
