@@ -16,21 +16,18 @@ module W5J.DB.TinkerPop
        ) where
 
 import Control.Monad (void)
-import Control.Monad.Trans.State (State)
-import qualified Control.Monad.Trans.State as State
 import Data.Aeson (ToJSON(toJSON), Value)
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>), mconcat)
-import Data.Text (pack, Text)
-import qualified Data.Text as T
 import Database.TinkerPop.Types
-  ( Connection, Binding
+  ( Connection
   )
 import qualified Database.TinkerPop as TP
 
 import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
+import W5J.DB.TinkerPop.GBuilder (runGBuilder, newPlaceHolder)
 import W5J.DB.TinkerPop.Parse (ioFromJSON, unACompleteWhat)
 import W5J.Aeson (toAWhat)
 import W5J.Interval (inf, sup)
@@ -76,7 +73,7 @@ addWhat conn what = do
                              whatUpdatedAt = t
                            }
     getGremlin w = runGBuilder $ do
-      p <- fmap place $ newPlaceHolder $ Aeson.toJSON $ toAWhat w
+      p <- newPlaceHolder $ Aeson.toJSON $ toAWhat w
       return ("addWhat(" <> p <> ").id()")
     parseResult [] = parseError "No element in the result."
     parseResult (ret : _) = ioFromJSON ret
@@ -112,28 +109,3 @@ deleteWhat = undefined
 clearAll :: Connection -> IO ()
 clearAll conn = void $ toGremlinError =<< TP.submit conn "g.V().drop()" Nothing
 
-
-type PlaceHolderIndex = Int
-
-type GBuilder = State (PlaceHolderIndex, [Value])
-
-newPlaceHolder :: Value -> GBuilder PlaceHolderIndex
-newPlaceHolder val = do
-  (next_index, values) <- State.get
-  State.put (succ next_index, values ++ [val])
-  return next_index
-
-place :: PlaceHolderIndex -> Text
-place index = "v" <> (pack $ show index)
-
-runGBuilder :: GBuilder a -> (a, Binding)
-runGBuilder gbuilder = (ret, binding)
-  where
-    (ret, (_, values)) = State.runState gbuilder (0, [])
-    binding = HM.fromList $ zip (map place [0 ..]) $ values
-
--- seqGremlin :: [GBuilder Text] -> GBuilder Text
--- seqGremlin = fmap seqSentences . sequence
---   where
---     seqSentences = T.intercalate "; "
--- 
