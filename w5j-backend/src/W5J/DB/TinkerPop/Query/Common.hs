@@ -16,7 +16,8 @@ module W5J.DB.TinkerPop.Query.Common
          -- * QCondTree
          QCondTree(..),
          -- * QOrder
-         QOrder(..)
+         QOrder(..),
+         orderComparator
        ) where
 
 import Data.Monoid ((<>))
@@ -46,6 +47,12 @@ data QCondTree c = QCondLeaf c
 data QOrder = QOrderAsc | QOrderDesc
             deriving (Show,Eq,Ord,Enum,Bounded)
 
+-- | Predefined Gremlin comparator for QOrder
+orderComparator :: QOrder -> Gremlin
+orderComparator QOrderAsc = "incr"
+orderComparator QOrderDesc = "decr"
+
+
 -- | Generic query object. type @c@ is target-specific query condition
 -- leaf. type @b@ is target-specific order base.
 data Query c b =
@@ -64,7 +71,7 @@ buildQueryWith buildCond buildOBy query = do
   gremlin_cond <- buildCondTree $ queryCond query
   gremlin_orderby <- buildOBy (queryOrder query) (queryOrderBy query)
   gremlin_range <- buildRange $ queryRange query
-  return ("g.V()" <> gremlin_cond <> ".order()" <> gremlin_orderby <> gremlin_range)
+  return (gremlin_cond <> ".order()" <> gremlin_orderby <> gremlin_range)
   where
     buildRange range = do
       v_min <- newPlaceHolder $ rangeMin range
