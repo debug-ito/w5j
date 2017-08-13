@@ -36,6 +36,7 @@ buildQuery = buildQueryWith buildCond buildOrder
   where
     buildCond (QCondTerm t) = do
       vt <- newPlaceHolder t
+      -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
       return (".or(__.has('title', textContains(" <> vt <> "))"
               <> ", __.has('body', textContains(" <> vt <> "))"
               <> ", __.has('tags', eq(" <> vt <> ")))")
