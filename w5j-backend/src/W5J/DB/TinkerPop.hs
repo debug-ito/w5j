@@ -16,8 +16,7 @@ module W5J.DB.TinkerPop
        ) where
 
 import Control.Monad (void)
-import Data.Aeson (ToJSON(toJSON), Value)
-import qualified Data.Aeson as Aeson
+import Data.Aeson (ToJSON(toJSON))
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>), mconcat)
@@ -73,7 +72,7 @@ addWhat conn what = do
                              whatUpdatedAt = t
                            }
     getGremlin w = runGBuilder $ do
-      p <- newPlaceHolder $ Aeson.toJSON $ toAWhat w
+      p <- newPlaceHolder $ toAWhat w
       return ("addWhat(" <> p <> ").id()")
     parseResult [] = parseError "No element in the result."
     parseResult (ret : _) = ioFromJSON ret

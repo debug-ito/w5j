@@ -14,7 +14,7 @@ module W5J.DB.TinkerPop.GBuilder
 
 import Control.Monad.Trans.State (State)
 import qualified Control.Monad.Trans.State as State
-import Data.Aeson (Value)
+import Data.Aeson (Value, ToJSON(toJSON))
 import Data.Monoid ((<>))
 import qualified Data.HashMap.Strict as HM
 import Data.Text (Text, pack)
@@ -27,10 +27,10 @@ type PlaceHolderVariable = Text
 
 type GBuilder = State (PlaceHolderIndex, [Value])
 
-newPlaceHolder :: Value -> GBuilder PlaceHolderVariable
+newPlaceHolder :: ToJSON v => v -> GBuilder PlaceHolderVariable
 newPlaceHolder val = do
   (next_index, values) <- State.get
-  State.put (succ next_index, values ++ [val])
+  State.put (succ next_index, values ++ [toJSON val])
   return $ place next_index
 
 place :: PlaceHolderIndex -> PlaceHolderVariable
