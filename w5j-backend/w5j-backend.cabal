@@ -28,7 +28,9 @@ library
                         W5J.Aeson,
                         W5J.DB.TinkerPop
   other-modules:        W5J.DB.TinkerPop.Error,
-                        W5J.DB.TinkerPop.Parse
+                        W5J.DB.TinkerPop.Parse,
+                        W5J.DB.TinkerPop.Query.Common,
+                        W5J.DB.TinkerPop.Query.What
   build-depends:        base,
                         text,
                         time,
