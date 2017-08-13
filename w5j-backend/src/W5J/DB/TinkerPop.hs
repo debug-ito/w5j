@@ -102,48 +102,6 @@ getWhatById conn wid = do
               <> ".map({ getCompleteWhat(it.get()) })"
     binds = HM.fromList [("WID", toJSON wid)]
 
--- TODO: addとgetがあればとりあえず作れる？もうちょっとクエリのバリエーションが必要か。
--- そろそろGremlin Serverも巻き込んだテストを書くべき。どうしよう？
-
-
--- vertex propertyのvalueは必ずArrayに入っている。これでSETやLIST cardinalityを表現している。
--- when_fromやwhen_toエッジがない場合は後ろの2つのリストが空になる。なるほど。
--- bottom upでFromJSONを書いていくといいのでは。
-
---- [Array [
----   Object (fromList [
----     ("id",Number 4112.0),
----     ("type",String "vertex"),
----     ("label",String "what"),
----     ("properties",Object (fromList [
----         ("body",Array [Object (fromList [("value",String "whaat body"),("id",String "1ky-368-35x")])]),
----         ("updated_at",Array [Object (fromList [("value",Number 1.500972323489e12),("id",String "2de-368-4qt")])]),
----         ("created_at",Array [Object (fromList [("value",Number 1.500972323489e12),("id",String "1z6-368-3yd")])]),
----         ("title",Array [Object (fromList [("value",String "whaaat title"),("id",String "16q-368-2dh")])]),
----         ("tags",Array [
----             Object (fromList [("value",String "bar"),("id",String "35u-368-sl")]),
----             Object (fromList [("value",String "buzz"),("id",String "3k2-368-sl")]),
----             Object (fromList [("value",String "foo"),("id",String "3ya-368-sl")])])]))]),
----   Array [
----     Object (fromList [
----      ("id",Number 4152.0),
----      ("type",String "vertex"),
----      ("label",String "when"),
----      ("properties",Object (fromList [
----         ("instant",Array [Object (fromList [("value",Number 1.500972323489e12),("id",String "16v-37c-6bp")])]),
----         ("is_time_explicit",Array [Object (fromList [("value",Bool True),("id",String "1l3-37c-745")])]),
----         ("time_zone",Array [Object (fromList [("value",String "DUMMY_TZ"),("id",String "1zb-37c-7wl")])])]))])],
----    Array [
----      Object (fromList [
----        ("id",Number 4336.0),
----        ("type",String "vertex"),
----        ("label",String "when"),
----        ("properties",Object (fromList [
----           ("instant",Array [Object (fromList [("value",Number 1.500972323489e12),("id",String "17i-3cg-6bp")])]),
----           ("is_time_explicit",Array [Object (fromList [("value",Bool True),("id",String "1lq-3cg-745")])]),
----           ("time_zone",Array [Object (fromList [("value",String "DUMMY_TZ"),("id",String "1zy-3cg-7wl")])])]))])]]
---- ]
-
 -- | Delete a 'What' vertex.
 deleteWhat :: Connection -> WhatID -> IO ()
 deleteWhat = undefined
