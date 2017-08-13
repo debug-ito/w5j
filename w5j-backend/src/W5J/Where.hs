@@ -6,7 +6,8 @@
 -- 
 module W5J.Where
        ( Where(..),
-         WhereID
+         WhereID,
+         whereFromName
        ) where
 
 import Data.Text (Text)
@@ -21,3 +22,8 @@ data Where =
     -- ^ name of Where vertex is unique.
   }
   deriving (Show,Eq,Ord)
+
+whereFromName :: Text -> Where
+whereFromName n = Where { whereId = Nothing,
+                          whereName = n
+                        }
