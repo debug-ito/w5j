@@ -37,5 +37,11 @@ buildQuery = buildQueryWith buildCond buildOrder
       return (".or(__.has('title', textContains(" <> vt <> "))"
               <> ", __.has('body', textContains(" <> vt <> "))"
               <> ", __.has('tags', eq(" <> vt <> ")))")
-    buildOrder order QOrderByWhen = undefined
+    buildOrder order QOrderByWhen =
+      return (byStep "when_from" <> byStep "when_to")
+      where
+        byStep edge_label = ".by(out('" <> edge_label <> "'), " <> comparator <> ")"
+        comparator = case order of
+          QOrderAsc -> "compareWhenVertices"
+          QOrderDesc -> "compareWhenVertices.reverse()"
       
