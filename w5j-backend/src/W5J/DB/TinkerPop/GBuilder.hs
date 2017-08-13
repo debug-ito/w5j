@@ -49,9 +49,12 @@ runGBuilder gbuilder = (ret, binding)
     binding = HM.fromList $ zip (map place [0 ..]) $ values
 
 submitGBuilder :: Connection -> GBuilder Gremlin -> IO (Either String [Value])
-submitGBuilder conn gbuilder = TP.submit conn gremlin (Just binding)
+submitGBuilder conn gbuilder = TP.submit conn gremlin mbinding
   where
-    (gremlin, binding) = runGBuilder gbuilder
+    (gremlin, binding_map) = runGBuilder gbuilder
+    mbinding = if HM.null binding_map
+               then Nothing
+               else Just binding_map
 
 -- seqGremlin :: [GBuilder Text] -> GBuilder Text
 -- seqGremlin = fmap seqSentences . sequence

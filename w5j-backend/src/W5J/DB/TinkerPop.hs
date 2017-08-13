@@ -103,5 +103,5 @@ deleteWhat = undefined
 
 -- | Clear all vertices and edges.
 clearAll :: Connection -> IO ()
-clearAll conn = void $ toGremlinError =<< TP.submit conn "g.V().drop()" Nothing
+clearAll conn = void $ toGremlinError =<< (submitGBuilder conn $ return "g.V().drop()")
 
