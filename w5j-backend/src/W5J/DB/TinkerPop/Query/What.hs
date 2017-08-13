@@ -5,10 +5,22 @@
 --
 -- 
 module W5J.DB.TinkerPop.Query.What
-       ( QOrder(..)
+       ( QueryWhat,
+         QOrderBy(..),
+         QCond(..)
        ) where
 
--- | order specifier for What data.
-data QOrder = QOrderByWhen
-            deriving (Show,Eq,Ord)
+import Data.Text (Text)
 
+import W5J.DB.TinkerPop.Query.Common (Query)
+
+type QueryWhat = Query QCond QOrderBy
+
+-- | order specifier for What data.
+data QOrderBy = QOrderByWhen
+              deriving (Show,Eq,Ord)
+
+-- | condition specifier for What data
+data QCond = QCondTerm Text
+             -- ^ free term search entry for title, body, tags.
+             deriving (Show,Eq,Ord)
