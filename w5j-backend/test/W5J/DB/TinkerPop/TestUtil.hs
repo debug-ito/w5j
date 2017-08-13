@@ -7,7 +7,8 @@ module W5J.DB.TinkerPop.TestUtil
 import System.Environment (lookupEnv)
 import Test.Hspec (SpecWith, Spec, pendingWith, before)
 
-import W5J.DB.TinkerPop (Connection, withConnection, clearAll)
+import W5J.DB.TinkerPop.IO.Connection (Connection, withConnection)
+import W5J.DB.TinkerPop.IO.Misc (clearAll)
 
 requireEnv :: String -> IO String
 requireEnv env_key = maybe bail return =<< lookupEnv env_key

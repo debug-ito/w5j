@@ -7,7 +7,8 @@ import W5J.Time (zeroTime)
 import W5J.What (What(..))
 import W5J.When (currentUTCWhen)
 import W5J.Where (Where(..))
-import W5J.DB.TinkerPop (Connection, withConnection, addWhat, getWhatById)
+import W5J.DB.TinkerPop.IO.Connection (Connection, withConnection)
+import W5J.DB.TinkerPop.IO.What (addWhat, getWhatById)
 
 main :: IO ()
 main = withConnection "localhost" 8182 mainWithConn

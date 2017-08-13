@@ -24,8 +24,8 @@ import Data.Aeson (Value, ToJSON(toJSON))
 import Data.Monoid ((<>))
 import qualified Data.HashMap.Strict as HM
 import Data.Text (Text, pack)
-import Database.TinkerPop.Types (Binding, Connection, Gremlin)
-import qualified Database.TinkerPop as TP
+
+import W5J.DB.TinkerPop.IO.Connection (Binding, Connection, Gremlin, submit)
 
 type PlaceHolderIndex = Int
 
@@ -49,7 +49,7 @@ runGBuilder gbuilder = (ret, binding)
     binding = HM.fromList $ zip (map place [0 ..]) $ values
 
 submitGBuilder :: Connection -> GBuilder Gremlin -> IO (Either String [Value])
-submitGBuilder conn gbuilder = TP.submit conn gremlin mbinding
+submitGBuilder conn gbuilder = submit conn gremlin mbinding
   where
     (gremlin, binding_map) = runGBuilder gbuilder
     mbinding = if HM.null binding_map

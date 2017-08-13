@@ -26,7 +26,9 @@ library
                         W5J.Interval,
                         W5J.Time,
                         W5J.Aeson,
-                        W5J.DB.TinkerPop
+                        W5J.DB.TinkerPop.IO.Connection,
+                        W5J.DB.TinkerPop.IO.What,
+                        W5J.DB.TinkerPop.IO.Misc
   other-modules:        W5J.DB.TinkerPop.Error,
                         W5J.DB.TinkerPop.Parse,
                         W5J.DB.TinkerPop.GBuilder,
@@ -61,8 +63,8 @@ test-suite spec
   -- default-extensions:   
   other-extensions:     QuasiQuotes, OverloadedStrings
   other-modules:        W5J.TimeSpec,
-                        W5J.AesonSpec
-                        W5J.DB.TinkerPopSpec,
+                        W5J.AesonSpec,
+                        W5J.DB.TinkerPop.IO.WhatSpec,
                         W5J.DB.TinkerPop.TestUtil
   build-depends:        base, w5j-backend, aeson, text,
                         hspec,
