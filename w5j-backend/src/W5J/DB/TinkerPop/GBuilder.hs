@@ -38,7 +38,7 @@ newPlaceHolder val = do
   return $ place next_index
 
 place :: PlaceHolderIndex -> PlaceHolderVariable
-place index = "v" <> (pack $ show index)
+place index = "__v" <> (pack $ show index)
 
 runGBuilder :: GBuilder a -> (a, Binding)
 runGBuilder gbuilder = (ret, binding)
