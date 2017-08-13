@@ -6,16 +6,20 @@
 --
 -- 
 module W5J.DB.TinkerPop
-       ( Connection,
+       ( -- * Connection
+         Connection,
          withConnection,
+         -- * What
          addWhat,
          updateWhat,
          getWhatById,
+         queryWhat,
          deleteWhat,
+         -- * Clear
          clearAll
        ) where
 
-import Control.Monad (void)
+import Control.Monad (void, mapM)
 import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>), mconcat)
 import Database.TinkerPop.Types
@@ -26,6 +30,7 @@ import qualified Database.TinkerPop as TP
 import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
 import W5J.DB.TinkerPop.GBuilder (newPlaceHolder, submitGBuilder)
 import W5J.DB.TinkerPop.Parse (ioFromJSON, unACompleteWhat)
+import qualified W5J.DB.TinkerPop.Query.What as QueryWhat
 import W5J.Aeson (toAWhat)
 import W5J.Interval (inf, sup)
 import W5J.Time (currentTime, toEpochMsec)
@@ -94,6 +99,14 @@ getWhatById conn wid = do
     gbuilder = do
       v_wid <- newPlaceHolder wid
       return ("g.V(" <> v_wid <> ").hasLabel('what').map({ getCompleteWhat(it.get()) })")
+
+queryWhat :: Connection -> QueryWhat.QueryWhat -> IO [What]
+queryWhat conn query =
+  fmap (map unACompleteWhat) $ mapM ioFromJSON =<< toGremlinError =<< submitGBuilder conn gbuilder
+  where
+    gbuilder = do
+      query_body <- QueryWhat.buildQuery query
+      return ("g.V().hasLabel('what')" <> query_body <> ".map({ getCompleteWhat(it.get()) })")
 
 -- | Delete a 'What' vertex.
 deleteWhat :: Connection -> WhatID -> IO ()
