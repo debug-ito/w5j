@@ -45,6 +45,12 @@ toWhenInDB w = w { whenInstant = fromEpochMsec $ toEpochMsec $ whenInstant w,
 whatWhereNames :: What -> [Text]
 whatWhereNames = map whereName . whatWheres
 
+makeWhen :: Integer -> Bool -> String -> When
+makeWhen ins ex tz = When { whenInstant = fromEpochMsec ins,
+                            whenIsTimeExplicit = ex,
+                            whenTimeZone = fromJust $ tzFromString tz
+                          }
+
 spec :: Spec
 spec = do
   withEnv $ do
@@ -88,21 +94,40 @@ spec_add_get = describe "addWhat, getWhatById" $ do
 
 spec_queryWhat :: SpecWith (String, Int)
 spec_queryWhat = describe "queryWhat" $ do
+  let addWhats conn ws = mapM_ (addWhat conn) ws
   specify "order" $ withCleanDB $ \conn -> do
-    addSampleWhats conn
-    let q = Query { queryCond = QCondTrue,
-                    queryOrder = QOrderAsc,
-                    queryOrderBy = QOrderByWhen,
-                    queryRange = qRange 0 3
-                  }
-    got <- queryWhat conn q
-    True `shouldBe` False -- TODO
-  where
-    addSampleWhats conn = mapM_ (addWhat conn) sampleWhats
-    sampleWhats :: [What]
-    sampleWhats =
-      [ -- TODO
-      ]
+    let makeWhat (t, w) = What { whatId = 0,
+                                 whatTitle = t,
+                                 whatWhen = w,
+                                 whatWheres = [],
+                                 whatBody = "",
+                                 whatTags = [],
+                                 whatCreatedAt = zeroTime,
+                                 whatUpdatedAt = zeroTime
+                               }
+        sampleOrder = map makeWhat
+          [ ("01", Nothing),
+            ("02", Just $ makeWhen 100 True  "+0000" ... makeWhen 200 True  "+0000"),
+            ("03", Just $ makeWhen 110 True  "+0000" ... makeWhen 150 False "+0000"),
+            ("04", Just $ makeWhen 100 False "+0000" ... makeWhen 300 True  "+0000"),
+            ("05", Just $ makeWhen 100 True  "+0000" ... makeWhen 200 False "+0000"),
+            ("06", Just $ makeWhen 100 False "+0000" ... makeWhen 300 False "+0000")
+          ]
+    addWhats conn sampleOrder
+    let q_asc = Query { queryCond = QCondTrue,
+                        queryOrder = QOrderAsc,
+                        queryOrderBy = QOrderByWhen,
+                        queryRange = qRange 0 100
+                      }
+        exp_asc = ["06", "04", "05", "02", "03", "01"]
+    got_asc <- queryWhat conn q_asc
+    (map whatTitle got_asc) `shouldBe` exp_asc
+    let q_desc = q_asc { queryOrder = QOrderDesc }
+        exp_desc = reverse exp_asc
+    got_desc <- queryWhat conn q_desc
+    (map whatTitle got_desc) `shouldBe` exp_desc
+    
+
 
     
 
