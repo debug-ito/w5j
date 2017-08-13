@@ -110,9 +110,9 @@ def getCompleteWhat = globals["getCompleteWhat"] = { what_v ->
 };
 
 def compareWhenVertices = globals["compareWhenVertices"] = { wa, wb ->
-  def comp_instant = wa.value("instant").compare(wb.value("instant"));
+  def comp_instant = wa.value("instant").compareTo(wb.value("instant"));
   if(comp_instant != 0) return comp_instant;
-  return wa.value("is_time_explicit").compare(wb.value("is_time_explicit"));
+  return wa.value("is_time_explicit").compareTo(wb.value("is_time_explicit"));
 } as Comparator;
 
 // return bindings
