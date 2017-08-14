@@ -5,6 +5,7 @@ import Control.Monad (mapM_)
 import Data.List (nub)
 import Data.Maybe (fromJust)
 import Data.Text (Text)
+import qualified Data.Text as T
 import Test.Hspec
 
 import W5J.Interval ((...), mapInterval)
@@ -120,6 +121,7 @@ spec_queryWhat :: SpecWith (String, Int)
 spec_queryWhat = describe "queryWhat" $ do
   spec_queryWhat_no_cond
   spec_queryWhat_tag
+  spec_queryWhat_term
 
 
 spec_queryWhat_no_cond :: SpecWith (String, Int)
@@ -217,3 +219,45 @@ spec_queryWhat_tag = describe "search for tags" $ do
   specify' "tag NOT AND"
     (QCondNot (QCondAnd (QCondLeaf $ QCondTag "a") (QCondLeaf $ QCondTag "b")))
     ["01", "02", "03", "04"]
+
+spec_queryWhat_term :: SpecWith (String, Int)
+spec_queryWhat_term = describe "search for term" $ do
+  let makeWhat (title, tags, body) =
+        What { whatId = 0,
+               whatTitle = title,
+               whatWhen = Nothing,
+               whatWheres = [],
+               whatBody = body,
+               whatTags = tags,
+               whatCreatedAt = zeroTime,
+               whatUpdatedAt = zeroTime
+             }
+      sample =
+        map makeWhat
+        [ ("01 foo bar", ["aaa", "bbb"], "hoge fuga qwerty"),
+          ("02 日本語のタイトル", ["bbb"], "quick brown fox jumped"),
+          ("03 over the lazy dog", ["ccc"], "aaa 日本語のボディ")
+        ]
+      makeQuery cond = Query { queryCond = cond,
+                               queryOrder = QOrderAsc,
+                               queryOrderBy = QOrderByWhen,
+                               queryRange = qRange 0 100
+                             }
+      specify' label cond expected =
+        specify label $ withCleanDB $ \conn -> do
+          addWhats conn sample
+          got <- queryWhat conn $ makeQuery $ cond
+          (map (T.take 2 . whatTitle) got) `shouldMatchList` expected
+  specify' "body word"
+    (QCondLeaf $ QCondTerm "fox")
+    ["02"]
+  specify' "tag and body"
+    (QCondLeaf $ QCondTerm "aaa")
+    ["01", "03"]
+  specify' "title word OR tag"
+    (QCondOr (QCondLeaf $ QCondTerm "foo") (QCondLeaf $ QCondTerm "ccc"))
+    ["01", "03"]
+  specify' "Japanese word"
+    (QCondLeaf $ QCondTerm "日本語")
+    ["02", "03"]
+        
