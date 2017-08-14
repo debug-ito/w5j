@@ -54,8 +54,12 @@ data QCond = QCondTerm Text
            deriving (Show,Eq,Ord)
 
 buildQuery :: QueryWhat -> GBuilder Gremlin
-buildQuery = buildQueryWith buildCond buildOrder
+buildQuery query = do
+  traversal <- buildQueryWith buildCond buildOrder query
+  start <- makeStart
+  return (start <> traversal)
   where
+    makeStart = return "g.V().hasLabel('what')"
     buildCond (QCondTerm t) = do
       vt <- newPlaceHolder t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html

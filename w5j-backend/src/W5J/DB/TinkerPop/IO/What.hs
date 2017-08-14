@@ -84,8 +84,8 @@ queryWhat conn query =
   fmap (map unACompleteWhat) $ mapM ioFromJSON =<< toGremlinError =<< submitGBuilder conn gbuilder
   where
     gbuilder = do
-      query_body <- QueryWhat.buildQuery query
-      return ("g.V().hasLabel('what')" <> query_body <> ".map({ getCompleteWhat(it.get()) })")
+      query_gremlin <- QueryWhat.buildQuery query
+      return (query_gremlin <> ".map({ getCompleteWhat(it.get()) })")
 
 -- | Delete a 'What' vertex.
 deleteWhat :: Connection -> WhatID -> IO ()
