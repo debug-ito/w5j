@@ -49,5 +49,5 @@ buildQuery = buildQueryWith buildCond buildOrder
         byStep edge_label = ".by(optionalT(out('" <> edge_label <> "')), " <> comparator <> ")"
         comparator = case order of
           QOrderAsc -> "compareOptWhenVertices"
-          QOrderDesc -> "compareOptWhenVertices.reverse()"
+          QOrderDesc -> "compareOptWhenVertices.reversed()"
       
