@@ -74,6 +74,10 @@ checkAddGet conn input = do
   got <- expectJust =<< getWhatById conn wid
   checkWhat got input
 
+addWhats :: Connection -> [What] -> IO ()
+addWhats conn ws = mapM_ (addWhat conn) ws
+
+
 spec :: Spec
 spec = do
   withEnv $ do
@@ -114,40 +118,43 @@ spec_add_get = describe "addWhat, getWhatById" $ do
 
 spec_queryWhat :: SpecWith (String, Int)
 spec_queryWhat = describe "queryWhat" $ do
-  let addWhats conn ws = mapM_ (addWhat conn) ws
-  specify "order" $ withCleanDB $ \conn -> do
-    let makeWhat (t, w) = What { whatId = 0,
-                                 whatTitle = t,
-                                 whatWhen = w,
-                                 whatWheres = [],
-                                 whatBody = "",
-                                 whatTags = [],
-                                 whatCreatedAt = zeroTime,
-                                 whatUpdatedAt = zeroTime
-                               }
-        sampleOrder = map makeWhat
-          [ ("01", Nothing),
-            ("02", Just $ makeWhen 100 True  "+0000" ... makeWhen 200 True  "+0000"),
-            ("03", Just $ makeWhen 110 True  "+0000" ... makeWhen 150 False "+0000"),
-            ("04", Just $ makeWhen 100 False "+0000" ... makeWhen 300 True  "+0000"),
-            ("05", Just $ makeWhen 100 True  "+0000" ... makeWhen 200 False "+0000"),
-            ("06", Just $ makeWhen 100 False "+0000" ... makeWhen 300 False "+0000")
-          ]
+  spec_queryWhat_no_cond
+
+
+spec_queryWhat_no_cond :: SpecWith (String, Int)
+spec_queryWhat_no_cond = describe "no cond" $ do
+  let makeWhat (t, w) = What { whatId = 0,
+                               whatTitle = t,
+                               whatWhen = w,
+                               whatWheres = [],
+                               whatBody = "",
+                               whatTags = [],
+                               whatCreatedAt = zeroTime,
+                               whatUpdatedAt = zeroTime
+                             }
+      sampleOrder =
+        map makeWhat
+        [ ("01", Nothing),
+          ("02", Just $ makeWhen 100 True  "+0000" ... makeWhen 200 True  "+0000"),
+          ("03", Just $ makeWhen 110 True  "+0000" ... makeWhen 150 False "+0000"),
+          ("04", Just $ makeWhen 100 False "+0000" ... makeWhen 300 True  "+0000"),
+          ("05", Just $ makeWhen 100 True  "+0000" ... makeWhen 200 False "+0000"),
+          ("06", Just $ makeWhen 100 False "+0000" ... makeWhen 300 False "+0000")
+        ]
+      q_asc = Query { queryCond = QCondTrue,
+                      queryOrder = QOrderAsc,
+                      queryOrderBy = QOrderByWhen,
+                      queryRange = qRange 0 100
+                    }
+      exp_asc = ["06", "04", "05", "02", "03", "01"]
+      q_desc = q_asc { queryOrder = QOrderDesc }
+      exp_desc = reverse exp_asc
+  specify "order by when" $ withCleanDB $ \conn -> do
     addWhats conn sampleOrder
-    let q_asc = Query { queryCond = QCondTrue,
-                        queryOrder = QOrderAsc,
-                        queryOrderBy = QOrderByWhen,
-                        queryRange = qRange 0 100
-                      }
-        exp_asc = ["06", "04", "05", "02", "03", "01"]
     got_asc <- queryWhat conn q_asc
     (map whatTitle got_asc) `shouldBe` exp_asc
-    let q_desc = q_asc { queryOrder = QOrderDesc }
-        exp_desc = reverse exp_asc
     got_desc <- queryWhat conn q_desc
     (map whatTitle got_desc) `shouldBe` exp_desc
     
 
-
-    
 
