@@ -3,18 +3,20 @@ def globals = [:];
 
 globals["hook"] = [
   onStartUp : { ctx ->
-    makeIndexFor = { prop_name, data_class -> 
+    makeMixedIndex = { prop_name, data_class -> 
       graph.tx().rollback();
-      mgmt = graph.openManagement();
+      def mgmt = graph.openManagement();
       if(mgmt.getPropertyKey(prop_name) != null) return;
+      mgmt.makePropertyKey(prop_name).dataType(data_class).make();
+      mgmt.commit();
 
-      index_name = prop_name + "_index";
-      prop_key = mgmt.makePropertyKey(prop_name).dataType(data_class).make()
-      mgmt.buildIndex(index_name, Vertex.class).addKey(prop_key).buildMixedIndex("search")
-      mgmt.commit()
+      def index_name = prop_name + "_index";
+      mgmt = graph.openManagement();
+      mgmt.buildIndex(index_name, Vertex.class).addKey(mgmt.getPropertyKey(prop_name)).buildMixedIndex("search");
+      mgmt.commit();
       
       //Wait for the index to become available
-      mgmt.awaitGraphIndexStatus(graph, index_name).call()
+      mgmt.awaitGraphIndexStatus(graph, index_name).call();
 
       // //Reindex the existing data
       // mgmt = graph.openManagement()
@@ -23,19 +25,26 @@ globals["hook"] = [
     };
 
     configTags = { ->
-      mgmt = graph.openManagement();
+      graph.tx().rollback();
+      def mgmt = graph.openManagement();
       if(mgmt.getPropertyKey("tags") != null) return;
       mgmt.makePropertyKey("tags").dataType(String.class).cardinality(Cardinality.SET).make();
       mgmt.commit();
+
+      mgmt = graph.openManagement();
+      mgmt.buildIndex("tags_index", Vertex.class).addKey(mgmt.getPropertyKey("tags")).buildCompositeIndex();
+      mgmt.commit();
+      mgmt.awaitGraphIndexStatus(graph, "tags_index").call();
     };
 
     configTags();
-
+    makeMixedIndex("title", String.class);
+    makeMixedIndex("body", String.class);
   }
 ] as LifeCycleHook
 
 // define the default TraversalSource to bind queries to.
-def g = globals["g"] = graph.traversal()
+def g = globals["g"] = graph.traversal();
 
 def setProps = { elem, props, keys ->
   keys.each { key ->
