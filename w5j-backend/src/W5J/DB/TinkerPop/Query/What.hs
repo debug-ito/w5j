@@ -17,6 +17,7 @@ import Data.Text (Text)
 
 import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder, Gremlin)
 import W5J.DB.TinkerPop.Query.Common (Query, QOrder(..), buildQueryWith)
+import W5J.Where (WhereID)
 
 type QueryWhat = Query QCond QOrderBy
 
@@ -29,7 +30,11 @@ data QCond = QCondTerm Text
              -- ^ free term search entry for title, body, tags.
            | QCondTag Text
              -- ^ exact match for tags.
-             deriving (Show,Eq,Ord)
+           | QCondWhereID WhereID
+             -- ^ match for 'whatWheres' by ID.
+           | QCondWhereName Text
+             -- ^ match for 'whatWheres' by name.
+           deriving (Show,Eq,Ord)
 
 buildQuery :: QueryWhat -> GBuilder Gremlin
 buildQuery = buildQueryWith buildCond buildOrder
@@ -43,6 +48,8 @@ buildQuery = buildQueryWith buildCond buildOrder
     buildCond (QCondTag t) = do
       vt <- newPlaceHolder t
       return (".has('tags', eq(" <> vt <> "))")
+    buildCond (QCondWhereID _) = undefined -- TODO
+    buildCond (QCondWhereName _) = undefined -- TODO
     buildOrder order QOrderByWhen =
       return (byStep "when_from" <> byStep "when_to")
       where
