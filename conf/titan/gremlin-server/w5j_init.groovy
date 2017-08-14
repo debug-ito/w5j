@@ -110,7 +110,7 @@ def getCompleteWhat = globals["getCompleteWhat"] = { what_v ->
 };
 
 def optionalT = globals["optionalT"] = { traversal ->
-  return coalesce(traversal.map({ return Optional.of(it.get()); }), __(Optional.empty()));
+  return coalesce(traversal.map({ return Optional.of(it.get()); }), constant(Optional.empty()));
 };
 
 def compareOptWhenVertices = globals["compareOptWhenVertices"] = { opt_wa, opt_wb ->
