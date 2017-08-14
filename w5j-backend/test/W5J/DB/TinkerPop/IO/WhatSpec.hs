@@ -199,3 +199,21 @@ spec_queryWhat_tag = describe "search for tags" $ do
   specify' "simple tag search"
     (QCondLeaf $ QCondTag "a")
     ["02", "05"]
+  specify' "tag AND"
+    (QCondAnd (QCondLeaf $ QCondTag "a") (QCondLeaf $ QCondTag "b"))
+    ["05"]
+  specify' "tag AND OR"
+    ( QCondOr
+      (QCondLeaf $ QCondTag "aa")
+      (QCondAnd (QCondLeaf $ QCondTag "a") (QCondLeaf $ QCondTag "b"))
+    )
+    ["03", "05"]
+  specify' "tag NOT"
+    (QCondNot (QCondLeaf $ QCondTag "b"))
+    ["01", "02", "04"]
+  specify' "false"
+    (QCondNot QCondTrue)
+    []
+  specify' "tag NOT AND"
+    (QCondNot (QCondAnd (QCondLeaf $ QCondTag "a") (QCondLeaf $ QCondTag "b")))
+    ["01", "02", "03", "04"]
