@@ -191,7 +191,11 @@ spec_queryWhat_tag = describe "search for tags" $ do
                                queryOrderBy = QOrderByWhen,
                                queryRange = qRange 0 100
                              }
-  specify "simple tag search" $ withCleanDB $ \conn -> do
-    addWhats conn sample
-    got <- queryWhat conn $ makeQuery $ QCondLeaf $ QCondTag "a"
-    (map whatTitle got) `shouldMatchList` ["02", "05"]
+      specify' label cond expected =
+        specify label $ withCleanDB $ \conn -> do
+          addWhats conn sample
+          got <- queryWhat conn $ makeQuery $ cond
+          (map whatTitle got) `shouldMatchList` expected
+  specify' "simple tag search"
+    (QCondLeaf $ QCondTag "a")
+    ["02", "05"]
