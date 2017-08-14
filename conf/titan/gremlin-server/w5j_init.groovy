@@ -109,7 +109,13 @@ def getCompleteWhat = globals["getCompleteWhat"] = { what_v ->
           __(what_v).out('where').toList()];
 };
 
+def nullableT = globals["nullableT"] = { traversal ->
+  return coalesce(traversal, __(null));
+};
+
 def compareWhenVertices = globals["compareWhenVertices"] = { wa, wb ->
+  if(wa == null && wb != null) return 1;
+  if(wa != null && wb == null) return -1;
   def comp_instant = wa.value("instant").compareTo(wb.value("instant"));
   if(comp_instant != 0) return comp_instant;
   return wa.value("is_time_explicit").compareTo(wb.value("is_time_explicit"));

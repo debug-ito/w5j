@@ -46,7 +46,7 @@ buildQuery = buildQueryWith buildCond buildOrder
     buildOrder order QOrderByWhen =
       return (byStep "when_from" <> byStep "when_to")
       where
-        byStep edge_label = ".by(out('" <> edge_label <> "'), " <> comparator <> ")"
+        byStep edge_label = ".by(nullableT(out('" <> edge_label <> "')), " <> comparator <> ")"
         comparator = case order of
           QOrderAsc -> "compareWhenVertices"
           QOrderDesc -> "compareWhenVertices.reverse()"
