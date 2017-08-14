@@ -15,6 +15,7 @@ import W5J.Time
 import W5J.What (What(..))
 import W5J.When (When(..), currentUTCWhen)
 import W5J.Where (Where(..))
+import W5J.DB.TinkerPop.IO.Connection (Connection)
 import W5J.DB.TinkerPop.IO.What (addWhat, getWhatById, queryWhat)
 import W5J.DB.TinkerPop.Query.Common
   ( Query(..), QCondTree(..), QOrder(..), QRange, qRange
@@ -51,6 +52,28 @@ makeWhen ins ex tz = When { whenInstant = fromEpochMsec ins,
                             whenTimeZone = fromJust $ tzFromString tz
                           }
 
+checkWhat :: What -> What -> Expectation
+checkWhat got_what input_what = do
+  fieldEq whatTitle
+  fieldEq whatWhen
+  fieldMatchList whatWhereNames
+  fieldEq whatBody
+  fieldMatchList whatTags
+  where
+    exp_what = input_what { whatWhen = fmap (mapInterval toWhenInDB) $ whatWhen input_what,
+                            whatTags = nub $ whatTags input_what
+                          }
+    fieldEq :: (Eq a, Show a) => (What -> a) -> Expectation
+    fieldEq = expectField shouldBe got_what exp_what
+    fieldMatchList :: (Eq a, Show a) => (What -> [a]) -> Expectation
+    fieldMatchList = expectField shouldMatchList got_what exp_what
+
+checkAddGet :: Connection -> What -> Expectation
+checkAddGet conn input = do
+  wid <- addWhat conn input
+  got <- expectJust =<< getWhatById conn wid
+  checkWhat got input
+
 spec :: Spec
 spec = do
   withEnv $ do
@@ -59,38 +82,23 @@ spec = do
 
 spec_add_get :: SpecWith (String, Int)
 spec_add_get = describe "addWhat, getWhatById" $ do
-  it "should add and get What data" $ withCleanDB $ \conn -> do
+  specify "has when, tags and wheres" $ withCleanDB $ \conn -> do
     cur_when <- currentUTCWhen
-    let input_what = what cur_when
-    wid <- addWhat conn input_what
-    got_what <- expectJust =<< getWhatById conn wid
-    let exp_what = expectedWhat input_what
-        fieldEq :: (Eq a, Show a) => (What -> a) -> Expectation
-        fieldEq = expectField shouldBe got_what exp_what
-        fieldMatchList :: (Eq a, Show a) => (What -> [a]) -> Expectation
-        fieldMatchList = expectField shouldMatchList got_what exp_what
-    fieldEq whatTitle
-    fieldEq whatWhen
-    fieldMatchList whatWhereNames
-    fieldEq whatBody
-    fieldMatchList whatTags
-  where
-    what cur_when = What { whatId = 0,
-                           whatTitle = "whaaat title",
-                           whatWhen = Just (cur_when ... cur_when),
-                           whatWheres = wheres,
-                           whatBody = "whaat body",
-                           whatTags = ["foo", "bar", "buzz", "foo"],
-                           whatCreatedAt = zeroTime,
-                           whatUpdatedAt = zeroTime
-                         }
-    expectedWhat input_what =
-      input_what { whatWhen = fmap (mapInterval toWhenInDB) $ whatWhen input_what,
-                   whatTags = nub $ whatTags input_what
-                 }
-    wheres = [ Where Nothing "place 1",
-               Where Nothing "place 999"
-             ]
+    let input_what =
+          What { whatId = 0,
+                 whatTitle = "whaaat title",
+                 whatWhen = Just (cur_when ... cur_when),
+                 whatWheres = wheres,
+                 whatBody = "whaat body",
+                 whatTags = ["foo", "bar", "buzz", "foo"],
+                 whatCreatedAt = zeroTime,
+                 whatUpdatedAt = zeroTime
+               }
+        wheres = [ Where Nothing "place 1",
+                   Where Nothing "place 999"
+                 ]
+    checkAddGet conn input_what
+    
 
 spec_queryWhat :: SpecWith (String, Int)
 spec_queryWhat = describe "queryWhat" $ do
