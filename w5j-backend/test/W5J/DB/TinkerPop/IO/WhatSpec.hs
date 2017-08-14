@@ -119,6 +119,7 @@ spec_add_get = describe "addWhat, getWhatById" $ do
 spec_queryWhat :: SpecWith (String, Int)
 spec_queryWhat = describe "queryWhat" $ do
   spec_queryWhat_no_cond
+  spec_queryWhat_tag
 
 
 spec_queryWhat_no_cond :: SpecWith (String, Int)
@@ -166,3 +167,31 @@ spec_queryWhat_no_cond = describe "no cond" $ do
     (map whatTitle got_desc) `shouldBe` (expSlice exp_desc [2 .. 4])
 
 
+spec_queryWhat_tag :: SpecWith (String, Int)
+spec_queryWhat_tag = describe "search for tags" $ do
+  let makeWhat (title, tags) = What { whatId = 0,
+                                      whatTitle = title,
+                                      whatWhen = Nothing,
+                                      whatWheres = [],
+                                      whatBody = "",
+                                      whatTags = tags,
+                                      whatCreatedAt = zeroTime,
+                                      whatUpdatedAt = zeroTime
+                                    }
+      sample =
+        map makeWhat
+        [ ("01", []),
+          ("02", ["a"]),
+          ("03", ["aa", "b"]),
+          ("04", ["abc", "d"]),
+          ("05", ["b", "a"])
+        ]
+      makeQuery cond = Query { queryCond = cond,
+                               queryOrder = QOrderAsc,
+                               queryOrderBy = QOrderByWhen,
+                               queryRange = qRange 0 100
+                             }
+  specify "simple tag search" $ withCleanDB $ \conn -> do
+    addWhats conn sample
+    got <- queryWhat conn $ makeQuery $ QCondLeaf $ QCondTag "a"
+    (map whatTitle got) `shouldMatchList` ["02", "05"]
