@@ -16,7 +16,10 @@ import Data.Monoid ((<>))
 import Data.Text (Text)
 
 import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder, Gremlin)
-import W5J.DB.TinkerPop.Query.Common (Query, QOrder(..), buildQueryWith)
+import W5J.DB.TinkerPop.Query.Common
+  ( Query, QOrder(..),
+    buildQueryWith, orderComparator
+  )
 import W5J.When (When)
 import W5J.Where (WhereID)
 
@@ -66,10 +69,11 @@ buildQuery = buildQueryWith buildCond buildOrder
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
-      return (byStep "when_from" <> byStep "when_to")
+      return (byStep "when_from" <> byStep "when_to" <> commonBy)
       where
         byStep edge_label = ".by(optionalT(out('" <> edge_label <> "')), " <> comparator <> ")"
         comparator = case order of
           QOrderAsc -> "compareOptWhenVertices"
           QOrderDesc -> "compareOptWhenVertices.reversed()"
+        commonBy = ".by('updated_at', " <> orderComparator order <> ")"
       
