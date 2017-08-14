@@ -155,6 +155,14 @@ spec_queryWhat_no_cond = describe "no cond" $ do
     (map whatTitle got_asc) `shouldBe` exp_asc
     got_desc <- queryWhat conn q_desc
     (map whatTitle got_desc) `shouldBe` exp_desc
-    
+  specify "order by when, range" $ withCleanDB $ \conn -> do
+    addWhats conn sampleOrder
+    let q_asc_r = q_asc { queryRange = qRange 2 4 }
+        expSlice list indices = map (\i -> list !! i) indices
+        q_desc_r = q_desc { queryRange = qRange 2 4 }
+    got_asc <- queryWhat conn q_asc_r
+    (map whatTitle got_asc) `shouldBe` (expSlice exp_asc [2 .. 4])
+    got_desc <- queryWhat conn q_desc_r
+    (map whatTitle got_desc) `shouldBe` (expSlice exp_desc [2 .. 4])
 
 
