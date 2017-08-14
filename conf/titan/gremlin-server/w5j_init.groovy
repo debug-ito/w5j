@@ -37,9 +37,26 @@ globals["hook"] = [
       mgmt.awaitGraphIndexStatus(graph, "tags_index").call();
     };
 
+    configWhereName = { ->
+      graph.tx().rollback();
+      def key_name = "where_name";
+      def mgmt = graph.openManagement();
+      if(mgmt.getPropertyKey(key_name) != null) return;
+      mgmt.makePropertyKey(key_name).dataType(String.class).make();
+      mgmt.commit();
+
+      mgmt = graph.openManagement();
+      def index_name = key_name + "_index";
+      mgmt.buildIndex(index_name, Vertex.class).
+        addKey(mgmt.getPropertyKey(key_name)).unique().buildCompositeIndex();
+      mgmt.commit();
+      mgmt.awaitGraphIndexStatus(graph, index_name).call();
+    }; 
+
     configTags();
     makeMixedIndex("title", String.class);
     makeMixedIndex("body", String.class);
+    configWhereName();
   }
 ] as LifeCycleHook
 
