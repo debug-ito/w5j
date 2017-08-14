@@ -26,16 +26,20 @@ import Data.Monoid ((<>))
 import W5J.Interval (Interval, sup, inf, (...))
 import W5J.DB.TinkerPop.GBuilder (GBuilder, Gremlin, newPlaceHolder)
 
--- | Range of elements indices to query.
+-- | Range of elements indices to query. Min is inclusive, max is
+-- exclusive. Starting from 0.
 newtype QRange = QRange { unQRange :: Interval Int }
                deriving (Eq,Show,Ord)
 
+-- | Make 'QRange'.
 qRange :: Int -> Int -> QRange
 qRange a b = QRange (a ... b)
 
+-- | Min of the range (inclusive.)
 qRangeMin :: QRange -> Int
 qRangeMin = inf . unQRange
 
+-- | Max of the range (exclusive.)
 qRangeMax :: QRange -> Int
 qRangeMax = sup . unQRange
 
