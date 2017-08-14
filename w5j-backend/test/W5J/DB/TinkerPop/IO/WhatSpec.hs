@@ -257,7 +257,9 @@ spec_queryWhat_term = describe "search for term" $ do
   specify' "title word OR tag"
     (QCondOr (QCondLeaf $ QCondTerm "foo") (QCondLeaf $ QCondTerm "ccc"))
     ["01", "03"]
-  specify' "Japanese word"
-    (QCondLeaf $ QCondTerm "日本語")
-    ["02", "03"]
+  specify "Japanese word" $ \(_, _) -> do
+    pendingWith "Need to set up ElasticSearch for Japanese full-text search."
+  -- specify' "Japanese word"
+  --   (QCondLeaf $ QCondTerm "日本語")
+  --   ["02", "03"]
         
