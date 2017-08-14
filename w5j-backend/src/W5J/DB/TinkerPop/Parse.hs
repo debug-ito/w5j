@@ -16,7 +16,7 @@ module W5J.DB.TinkerPop.Parse
          AVertexWhere(..)
        ) where
 
-import Control.Applicative ((<$>), (<*>), empty)
+import Control.Applicative ((<$>), (<*>), (<|>), empty)
 import Control.Monad (mapM, guard)
 import Data.Aeson
   ( FromJSON(parseJSON), Object, (.:), Value(Object,Array), fromJSON,
@@ -27,6 +27,7 @@ import Data.Foldable (toList)
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
+import Data.Monoid (mempty)
 import Data.Text (Text)
 
 import W5J.Aeson
@@ -70,7 +71,8 @@ instance FromJSON a => FromJSON (PropertyMany a) where
   parseJSON _ = empty
 
 propMany :: FromJSON a => Object -> Text -> Parser [a]
-propMany props name = map unPropertyValue <$> unPropertyMany <$> (props .: name)
+propMany props name =
+  fmap (map unPropertyValue . unPropertyMany) $ parseJSON $ maybe (Array mempty) id $ HM.lookup name props
 
 type VertexID = Integer
 type VertexLabel = Text

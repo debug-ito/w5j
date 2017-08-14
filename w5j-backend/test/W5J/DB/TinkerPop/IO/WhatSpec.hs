@@ -98,6 +98,18 @@ spec_add_get = describe "addWhat, getWhatById" $ do
                    Where Nothing "place 999"
                  ]
     checkAddGet conn input_what
+  specify "no when, no tag, no where" $ withCleanDB $ \conn -> do
+    let input_what =
+          What { whatId = 0,
+                 whatTitle = "foo bar",
+                 whatWhen = Nothing,
+                 whatWheres = [],
+                 whatBody = "body",
+                 whatTags = [],
+                 whatCreatedAt = zeroTime,
+                 whatUpdatedAt = zeroTime
+               }
+    checkAddGet conn input_what
     
 
 spec_queryWhat :: SpecWith (String, Int)
