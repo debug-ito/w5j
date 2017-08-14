@@ -17,6 +17,7 @@ import Data.Text (Text)
 
 import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder, Gremlin)
 import W5J.DB.TinkerPop.Query.Common (Query, QOrder(..), buildQueryWith)
+import W5J.When (When)
 import W5J.Where (WhereID)
 
 type QueryWhat = Query QCond QOrderBy
@@ -24,6 +25,17 @@ type QueryWhat = Query QCond QOrderBy
 -- | order specifier for What data.
 data QOrderBy = QOrderByWhen
               deriving (Show,Eq,Ord)
+
+-- | comparator symbols for conditions. (this may be in
+-- "W5J.DB.TinkerPop.Query.Common" module.)
+data QComparator = QCompLte
+                 | QCompGte
+                 deriving (Show,Eq,Ord)
+
+-- | condition symbols about 'whatWhen'.
+data QCondWhenTerm = QCondWhenFrom
+                   | QCondWhenTo
+                   deriving (Show,Eq,Ord)
 
 -- | condition specifier for What data
 data QCond = QCondTerm Text
@@ -34,6 +46,8 @@ data QCond = QCondTerm Text
              -- ^ match for 'whatWheres' by ID.
            | QCondWhereName Text
              -- ^ match for 'whatWheres' by name.
+           | QCondWhen QCondWhenTerm QComparator When
+             -- ^ compare 'whatWhen' with the given constant 'When'.
            deriving (Show,Eq,Ord)
 
 buildQuery :: QueryWhat -> GBuilder Gremlin
@@ -50,6 +64,7 @@ buildQuery = buildQueryWith buildCond buildOrder
       return (".has('tags', eq(" <> vt <> "))")
     buildCond (QCondWhereID _) = undefined -- TODO
     buildCond (QCondWhereName _) = undefined -- TODO
+    buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
       return (byStep "when_from" <> byStep "when_to")
       where
