@@ -32,7 +32,8 @@ library
                         W5J.DB.TinkerPop.Query.What
   other-modules:        W5J.DB.TinkerPop.Error,
                         W5J.DB.TinkerPop.Parse,
-                        W5J.DB.TinkerPop.GBuilder
+                        W5J.DB.TinkerPop.GBuilder,
+                        W5J.DB.TinkerPop.GStep
   build-depends:        base,
                         text,
                         time,
