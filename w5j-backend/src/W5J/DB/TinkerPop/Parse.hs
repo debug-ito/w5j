@@ -163,7 +163,7 @@ instance FromJSON AVertexWhere where
         guard (vlabel == "where")
         fmap (AVertexWhere . AWhere)
           $ Where (Just vid)
-          <$> propOne obj "where_name"
+          <$> propOne obj "name"
 
 
 ioFromJSON :: FromJSON a => Value -> IO a

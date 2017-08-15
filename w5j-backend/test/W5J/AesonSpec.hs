@@ -54,8 +54,8 @@ sampleJSON = fromJust $ decode $ [here|
     "to":   {"instant": 2000, "is_time_explicit": true, "time_zone": "+0900"}
   },
   "wheres": [
-    {"where_id": 5, "where_name": "place 5"},
-    {"where_id": null, "where_name": "new place"}
+    {"where_id": 5, "name": "place 5"},
+    {"where_id": null, "name": "new place"}
   ],
   "body": "hoge body",
   "tags": ["foo", "bar"],

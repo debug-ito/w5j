@@ -80,11 +80,11 @@ globals["hook"] = [
     makePropKey("tags", String.class, Cardinality.SET);
     makePropKey("title", String.class);
     makePropKey("body", String.class);
-    makePropKey("where_name", String.class);
+    makePropKey("name", String.class);
     makeIndex(["tags"], Vertex.class, ["what"]);
     makeIndex(["title"], Vertex.class, ["what"], "search");
     makeIndex(["body"], Vertex.class, ["what"], "search");
-    makeIndex(["where_name"], Vertex.class, ["where"], null, true);
+    makeIndex(["name"], Vertex.class, ["where"], null, true);
   }
 ] as LifeCycleHook
 
@@ -126,10 +126,10 @@ def toElem = { traversal ->
 // };
 
 def getOrCreateWhere = { props ->
-  def v = toElem(g.V().hasLabel("where").has("where_name", props["where_name"]));
+  def v = toElem(g.V().hasLabel("where").has("name", props["name"]));
   if(v == null) {
     v = graph.addVertex("where");
-    setProps(v, props, ["where_name"]);
+    setProps(v, props, ["name"]);
   }
   return v;
 };
