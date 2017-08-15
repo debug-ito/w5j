@@ -80,11 +80,11 @@ buildQuery query = do
       return $ GStep.orderBy [byWhen "when_from", byWhen "when_to", commonBy]
       where
         byWhen edge_label =
-          (GStep.unsafeFromGremlin ("optionalT(out('" <> edge_label <> "'))"), comparator)
+          (GStep.unsafeGTraversal ("optionalT(out('" <> edge_label <> "'))"), comparator)
         comparator = case order of
           QOrderAsc -> "compareOptWhenVertices"
           QOrderDesc -> "compareOptWhenVertices.reversed()"
-        commonBy = -- ".by('updated_at', " <> orderComparator order <> ")"
-          (GStep.unsafeFromGremlin "values('updated_at')", orderComparator order)
-          -- TODO: make values GStep.
+        commonBy =
+          (GStep.unsafeGTraversal "values('updated_at')", orderComparator order)
+          -- TODO: make ".values" GStep.
       

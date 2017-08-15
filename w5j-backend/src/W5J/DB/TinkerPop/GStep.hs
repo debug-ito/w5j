@@ -11,15 +11,18 @@ module W5J.DB.TinkerPop.GStep
          GremlinLike(..),
          ToGTraversal(..),
          GStep,
-         (@.),
          Vertex,
          Edge,
          -- * GTraversal
+         (@.),
          allVertices,
          vertexByID,
-         -- * Conversion
+         unsafeGTraversal,
+         -- * GStep
+         unsafeGStep,
+         -- ** Conversion
          outVoid,
-         -- * Filter step
+         -- ** Filter step
          identity,
          filterL,
          filter,
@@ -28,7 +31,7 @@ module W5J.DB.TinkerPop.GStep
          or,
          not,
          range,
-         -- * Sorting step
+         -- ** Sorting step
          orderBy
        ) where
 
@@ -60,6 +63,9 @@ class ToGTraversal g where
 
 instance ToGTraversal GTraversal where
   toGTraversal = id
+
+unsafeGTraversal :: Gremlin -> GTraversal s e
+unsafeGTraversal = GTraversal
 
 allVertices :: GTraversal Void Vertex
 allVertices = unsafeFromGremlin "g.V()"
@@ -105,6 +111,9 @@ data Vertex
 -- | Edge in a TinkerPop graph.
 data Edge
 
+unsafeGStep :: Gremlin -> GStep s e
+unsafeGStep = GStep
+
 -- | Ignore the output.
 outVoid :: GStep s e -> GStep s ()
 outVoid = GStep . unGStep
@@ -120,8 +129,8 @@ filterL :: Gremlin
 filterL block = unsafeFromGremlin (".filter({" <> block <> "})")
 
 -- | @.filter@ step with steps(traversal).
-filter :: GStep s () -> GStep s s
-filter step = unsafeFromGremlin (".filter(__" <> toGremlin step <> ")")
+filter :: ToGTraversal g => g s e -> GStep s s
+filter step = unsafeFromGremlin (".filter(" <> (toGremlin $ toGTraversal step) <> ")")
 
 -- | @.has@ step.
 has :: Gremlin
@@ -137,15 +146,15 @@ hasLabel :: Gremlin -- ^ expected label name
 hasLabel l = unsafeFromGremlin (".hasLabel(" <> l <> ")")
 
 -- | @.or@ step.
-or :: [GStep s e] -> GStep s s
+or :: ToGTraversal g => [g s e] -> GStep s s
 or conds = unsafeFromGremlin (".or(" <> conds_g <> ")")
   where
     conds_g = T.intercalate ", " $ map toG conds
-    toG cond = "__" <> toGremlin cond
+    toG cond = toGremlin $ toGTraversal cond
 
 -- | @.not@ step.
-not :: GStep s e -> GStep s s
-not cond = unsafeFromGremlin (".not(__" <> toGremlin cond <> ")")
+not :: ToGTraversal g => g s e -> GStep s s
+not cond = unsafeFromGremlin (".not(" <> (toGremlin $ toGTraversal cond) <> ")")
 
 -- | @.range@ step.
 range :: Gremlin
@@ -156,11 +165,12 @@ range :: Gremlin
 range min_g max_g = unsafeFromGremlin (".range(" <> min_g <> ", " <> max_g <> ")")
 
 -- | @.order@ and @.by@ steps
-orderBy :: [(GStep s e, Gremlin)]
+orderBy :: ToGTraversal g
+        => [(g s e, Gremlin)]
            -- ^ (accessor steps, comparator) of each @.by@
         -> GStep s s
 orderBy bys = unsafeFromGremlin (".order()" <> bys_g)
   where
     bys_g = mconcat $ map toG bys
     toG (accessor, comparator) =
-      ".by(__" <> toGremlin accessor <> ", " <> comparator <> ")"
+      ".by(" <> (toGremlin $ toGTraversal accessor) <> ", " <> comparator <> ")"
