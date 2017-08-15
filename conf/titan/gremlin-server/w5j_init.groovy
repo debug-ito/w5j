@@ -6,12 +6,13 @@ globals["hook"] = [
     makeMixedIndex = { prop_name, data_class -> 
       graph.tx().rollback();
       def mgmt = graph.openManagement();
-      if(mgmt.getPropertyKey(prop_name) != null) return;
+      if(mgmt.containsPropertyKey(prop_name)) return;
       mgmt.makePropertyKey(prop_name).dataType(data_class).make();
       mgmt.commit();
 
       def index_name = prop_name + "_index";
       mgmt = graph.openManagement();
+      if(mgmt.containsGraphIndex(index_name)) return;
       mgmt.buildIndex(index_name, Vertex.class).addKey(mgmt.getPropertyKey(prop_name)).buildMixedIndex("search");
       mgmt.commit();
       
@@ -27,12 +28,15 @@ globals["hook"] = [
     configTags = { ->
       graph.tx().rollback();
       def mgmt = graph.openManagement();
-      if(mgmt.getPropertyKey("tags") != null) return;
-      mgmt.makePropertyKey("tags").dataType(String.class).cardinality(Cardinality.SET).make();
+      def key_name = "tags";
+      if(mgmt.containsPropertyKey(key_name)) return;
+      mgmt.makePropertyKey(key_name).dataType(String.class).cardinality(Cardinality.SET).make();
       mgmt.commit();
 
+      def index_name = key_name + "_index";
       mgmt = graph.openManagement();
-      mgmt.buildIndex("tags_index", Vertex.class).addKey(mgmt.getPropertyKey("tags")).buildCompositeIndex();
+      if(mgmt.containsGraphIndex(index_name)) return;
+      mgmt.buildIndex(index_name, Vertex.class).addKey(mgmt.getPropertyKey(key_name)).buildCompositeIndex();
       mgmt.commit();
       mgmt.awaitGraphIndexStatus(graph, "tags_index").call();
     };
@@ -41,12 +45,13 @@ globals["hook"] = [
       graph.tx().rollback();
       def key_name = "where_name";
       def mgmt = graph.openManagement();
-      if(mgmt.getPropertyKey(key_name) != null) return;
+      if(mgmt.containsPropertyKey(key_name)) return;
       mgmt.makePropertyKey(key_name).dataType(String.class).make();
       mgmt.commit();
 
       mgmt = graph.openManagement();
       def index_name = key_name + "_index";
+      if(mgmt.containsGraphIndex(index_name)) return;
       mgmt.buildIndex(index_name, Vertex.class).
         addKey(mgmt.getPropertyKey(key_name)).unique().buildCompositeIndex();
       mgmt.commit();
