@@ -1,15 +1,27 @@
+import com.thinkaurelius.titan.graphdb.database.management.ManagementSystem;
 
 def globals = [:];
 
 globals["hook"] = [
   onStartUp : { ctx ->
+    def makeEdgeLabel = { label_name, mul = Multiplicity.MULTI ->
+      def mgmt = graph.openManagement();
+      if(mgmt.containsEdgeLabel(label_name)) return;
+      mgmt.makeEdgeLabel(label_name).multiplicity(mul).make();
+      mgmt.commit();
+    };
+    def makeVertexLabel = { label_name ->
+      def mgmt = graph.openManagement();
+      if(mgmt.containsVertexLabel(label_name)) return;
+      mgmt.makeVertexLabel(label_name).make();
+      mgmt.commit();
+    };
     def makePropKey = { key_name, data_class, card = Cardinality.SINGLE ->
       def mgmt = graph.openManagement();
       if(mgmt.containsPropertyKey(key_name)) return;
-      mgmt.makePropertyKey(prop_name).dataType(data_class).cardinality(card).make();
+      mgmt.makePropertyKey(key_name).dataType(data_class).cardinality(card).make();
       mgmt.commit();
     };
-    
     def makeIndex = { prop_names, target_class, indexer_id = null, is_unique = false -> 
       graph.tx().rollback();
       def index_name = prop_names.join("_") + "_index";
@@ -20,10 +32,10 @@ globals["hook"] = [
         builder = builder.addKey(mgmt.getPropertyKey(name));
       };
       if(indexer_id == null) {
-        builder.buildCompositeIndex();
         if(is_unique) {
-          builder.unique().buildCompositeIndex();
+          builder = builder.unique();
         }
+        builder.buildCompositeIndex();
       }else {
         builder.buildMixedIndex(indexer_id);
       }
@@ -35,10 +47,13 @@ globals["hook"] = [
       // //Reindex the existing data
       // mgmt = graph.openManagement()
       // mgmt.updateIndex(mgmt.getGraphIndex("whenFromIndex"), SchemaAction.REINDEX).get()
-
-      mgmt.commit();
+      // mgmt.commit();
     };
 
+    ["what", "when", "where", "how", "who"].each { l -> makeVertexLabel(l); };
+    makeEdgeLabel("when_from", Multiplicity.ONE2ONE);
+    makeEdgeLabel("when_to", Multiplicity.ONE2ONE);
+    makeEdgeLabel("where", Multiplicity.MANY2ONE);
     makePropKey("tags", String.class, Cardinality.SET);
     makeIndex(["tags"], Vertex.class);
     makePropKey("title", String.class);
