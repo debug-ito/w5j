@@ -23,7 +23,8 @@ globals["hook"] = [
       mgmt.makePropertyKey(key_name).dataType(data_class).cardinality(card).make();
       mgmt.commit();
     };
-    def makeIndex = { prop_names, target_class, indexer_id = null, is_unique = false -> 
+    def makeIndex = { prop_names, target_class, target_labels,
+                      indexer_id = null, is_unique = false -> 
       graph.tx().rollback();
       def index_name = prop_names.join("_") + "_index";
       def mgmt = graph.openManagement();
@@ -31,6 +32,17 @@ globals["hook"] = [
       def builder = mgmt.buildIndex(index_name, target_class);
       prop_names.each { name ->
         builder = builder.addKey(mgmt.getPropertyKey(name));
+      };
+      target_labels.each { l ->
+        def lobj;
+        if(target_class == Vertex.class) {
+          lobj = mgmt.getVertexLabel(l);
+        }else if(target_class == Edge.class) {
+          lobj = mgmt.getEdgeLabel(l);
+        }else {
+          throw new Exception("Unknown target_class: " + target_class.toString());
+        }
+        builder = builder.indexOnly(lobj);
       };
       if(indexer_id == null) {
         if(is_unique) {
@@ -66,13 +78,13 @@ globals["hook"] = [
     makeEdgeLabel("when_to", Multiplicity.ONE2ONE);
     makeEdgeLabel("where", Multiplicity.SIMPLE);
     makePropKey("tags", String.class, Cardinality.SET);
-    makeIndex(["tags"], Vertex.class);
     makePropKey("title", String.class);
-    makeIndex(["title"], Vertex.class, "search");
     makePropKey("body", String.class);
-    makeIndex(["body"], Vertex.class, "search");
     makePropKey("where_name", String.class);
-    makeIndex(["where_name"], Vertex.class, null, true);
+    makeIndex(["tags"], Vertex.class, ["what"]);
+    makeIndex(["title"], Vertex.class, ["what"], "search");
+    makeIndex(["body"], Vertex.class, ["what"], "search");
+    makeIndex(["where_name"], Vertex.class, ["where"], null, true);
   }
 ] as LifeCycleHook
 
