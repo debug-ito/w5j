@@ -12,10 +12,12 @@ module W5J.DB.TinkerPop.Query.What
          QCond(..)
        ) where
 
+import Control.Category ((>>>))
 import Data.Monoid ((<>))
 import Data.Text (Text)
 
 import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder, Gremlin)
+import qualified W5J.DB.TinkerPop.GStep as GStep
 import W5J.DB.TinkerPop.Query.Common
   ( Query, QOrder(..),
     buildQueryWith, orderComparator
@@ -57,27 +59,34 @@ buildQuery :: QueryWhat -> GBuilder Gremlin
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   start <- makeStart
-  return (start <> traversal)
+  return $ GStep.gremlinStep (start >>> traversal)
   where
-    makeStart = return "g.V().hasLabel('what')"
+    makeStart :: GBuilder (GStep.GStep () GStep.Vertex)
+    makeStart = return (GStep.allVertices >>> GStep.hasLabel "'what'")
+    buildCond :: QCond -> GBuilder (GStep.GStep GStep.Vertex GStep.Vertex)
     buildCond (QCondTerm t) = do
       vt <- newPlaceHolder t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
-      return (".or(__.has('title', textContains(" <> vt <> "))"
-              <> ", __.has('body', textContains(" <> vt <> "))"
-              <> ", __.has('tags', eq(" <> vt <> ")))")
+      return $ GStep.or $ map GStep.outVoid
+        [ GStep.has "'title'" ("textContains(" <> vt <> ")"),
+          GStep.has "'body'"  ("textContains(" <> vt <> ")"),
+          GStep.has "'tags'"  ("eq(" <> vt <> ")")
+        ]
     buildCond (QCondTag t) = do
       vt <- newPlaceHolder t
-      return (".has('tags', eq(" <> vt <> "))")
+      return $ GStep.has "'tags'" ("eq(" <> vt <> ")")
     buildCond (QCondWhereID _) = undefined -- TODO
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
-      return (byStep "when_from" <> byStep "when_to" <> commonBy)
+      return $ GStep.orderBy [byWhen "when_from", byWhen "when_to", commonBy]
       where
-        byStep edge_label = ".by(optionalT(out('" <> edge_label <> "')), " <> comparator <> ")"
+        byWhen edge_label =
+          (GStep.unsafeGStep ("optionalT(out('" <> edge_label <> "'))"), comparator)
         comparator = case order of
           QOrderAsc -> "compareOptWhenVertices"
           QOrderDesc -> "compareOptWhenVertices.reversed()"
-        commonBy = ".by('updated_at', " <> orderComparator order <> ")"
+        commonBy = -- ".by('updated_at', " <> orderComparator order <> ")"
+          (GStep.unsafeGStep "values('updated_at')", orderComparator order)
+          -- TODO: make values GStep.
       

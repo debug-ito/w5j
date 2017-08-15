@@ -22,9 +22,12 @@ module W5J.DB.TinkerPop.Query.Common
        ) where
 
 import Data.Monoid ((<>))
+import Control.Category ((>>>))
 
 import W5J.Interval (Interval, sup, inf, (...))
 import W5J.DB.TinkerPop.GBuilder (GBuilder, Gremlin, newPlaceHolder)
+import W5J.DB.TinkerPop.GStep (GStep)
+import qualified W5J.DB.TinkerPop.GStep as GStep
 
 -- | Range of elements indices to query. Min is inclusive, max is
 -- exclusive. Starting from 0.
@@ -73,35 +76,33 @@ data Query c b =
         }
   deriving (Show,Eq,Ord)
 
-buildQueryWith :: (c -> GBuilder Gremlin)
-               -- ^ generate Gremlin step for the leaf condition
-               -- @c@. It must be a __filtering step__, i.e., its
-               -- output type must be the same as the input type.
-               -> (QOrder -> b -> GBuilder Gremlin)
-               -- ^ generate Gremlin @.by@ step(s) for ordering.
+buildQueryWith :: (c -> GBuilder (GStep s s))
+               -- ^ generate Gremlin step for the leaf condition @c@.
+               -> (QOrder -> b -> GBuilder (GStep s s))
+               -- ^ generate Gremlin @.order@ and @.by@ step(s) for
+               -- ordering.
                -> Query c b
-               -> GBuilder Gremlin
+               -> GBuilder (GStep s s)
 buildQueryWith buildCond buildOBy query = do
   gremlin_cond <- buildCondTree $ queryCond query
   gremlin_orderby <- buildOBy (queryOrder query) (queryOrderBy query)
   gremlin_range <- buildRange $ queryRange query
-  return (gremlin_cond <> ".order()" <> gremlin_orderby <> gremlin_range)
+  return (gremlin_cond >>> gremlin_orderby >>> gremlin_range)
   where
     buildRange range = do
       v_min <- newPlaceHolder $ qRangeMin range
       v_max <- newPlaceHolder $ qRangeMax range
-      return (".range(" <> v_min <> ", " <> v_max <> ")")
-    buildBinaryCond method a b = do
+      return $ GStep.range v_min v_max
+    buildCondTree (QCondOr a b) = do
       ga <- buildCondTree a
       gb <- buildCondTree b
-      return (". " <> method <> "(__" <> ga <> ", __" <> gb <> ")")
-    buildCondTree (QCondOr a b) = buildBinaryCond "or" a b
+      return $ GStep.or $ map GStep.outVoid $ [ga, gb]
     buildCondTree (QCondAnd a b) = do
       ga <- buildCondTree a
       gb <- buildCondTree b
-      return (ga <> gb)
+      return (ga >>> gb)
     buildCondTree (QCondNot a) = do
       ga <- buildCondTree a
-      return (".not(__" <> ga <> ")")
+      return $ GStep.not $ GStep.outVoid ga
     buildCondTree (QCondLeaf c) = buildCond c
-    buildCondTree (QCondTrue) = return ".identity()"
+    buildCondTree (QCondTrue) = return $ GStep.identity

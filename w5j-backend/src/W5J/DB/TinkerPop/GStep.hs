@@ -22,12 +22,15 @@ module W5J.DB.TinkerPop.GStep
          filterL,
          filter,
          has,
+         hasLabel,
          or,
+         not,
+         range,
          -- * Sorting step
          orderBy
        ) where
 
-import Prelude hiding (or, filter)
+import Prelude hiding (or, filter, not)
 import Control.Category (Category)
 import qualified Control.Category as Category
 import Data.Monoid ((<>), mconcat)
@@ -68,6 +71,8 @@ gremlinStep = unGStep
 outVoid :: GStep s e -> GStep s ()
 outVoid = GStep . unGStep
 
+-- todo: make the source type Void, so that it won't compose with
+-- anything else.
 allVertices :: GStep () Vertex
 allVertices = unsafeGStep "g.V()"
 
@@ -98,12 +103,29 @@ has :: Gremlin
     -> GStep s s
 has target expec = unsafeGStep (".has(" <> target <> ", " <> expec <> ")")
 
+-- | @.hasLabel@ step
+hasLabel :: Gremlin -- ^ expected label name
+         -> GStep s s
+hasLabel l = unsafeGStep (".hasLabel(" <> l <> ")")
+
 -- | @.or@ step.
 or :: [GStep s ()] -> GStep s s
 or conds = unsafeGStep (".or(" <> conds_g <> ")")
   where
     conds_g = T.intercalate ", " $ map toG conds
     toG cond = "__" <> gremlinStep cond
+
+-- | @.not@ step.
+not :: GStep s () -> GStep s s
+not cond = unsafeGStep (".not(__" <> gremlinStep cond <> ")")
+
+-- | @.range@ step.
+range :: Gremlin
+      -- ^ min
+      -> Gremlin
+      -- ^ max
+      -> GStep s s
+range min_g max_g = unsafeGStep (".range(" <> min_g <> ", " <> max_g <> ")")
 
 -- | @.order@ and @.by@ steps
 orderBy :: [(GStep s (), Gremlin)]
