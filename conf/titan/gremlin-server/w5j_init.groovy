@@ -3,65 +3,50 @@ def globals = [:];
 
 globals["hook"] = [
   onStartUp : { ctx ->
-    makeMixedIndex = { prop_name, data_class -> 
-      graph.tx().rollback();
+    def makePropKey = { key_name, data_class, card = Cardinality.SINGLE ->
       def mgmt = graph.openManagement();
-      if(mgmt.containsPropertyKey(prop_name)) return;
-      mgmt.makePropertyKey(prop_name).dataType(data_class).make();
+      if(mgmt.containsPropertyKey(key_name)) return;
+      mgmt.makePropertyKey(prop_name).dataType(data_class).cardinality(card).make();
       mgmt.commit();
-
-      def index_name = prop_name + "_index";
-      mgmt = graph.openManagement();
+    };
+    
+    def makeIndex = { prop_names, target_class, indexer_id = null, is_unique = false -> 
+      graph.tx().rollback();
+      def index_name = prop_names.join("_") + "_index";
+      def mgmt = graph.openManagement();
       if(mgmt.containsGraphIndex(index_name)) return;
-      mgmt.buildIndex(index_name, Vertex.class).addKey(mgmt.getPropertyKey(prop_name)).buildMixedIndex("search");
+      def builder = mgmt.buildIndex(index_name, target_class);
+      prop_names.each { name ->
+        builder = builder.addKey(mgmt.getPropertyKey(name));
+      };
+      if(indexer_id == null) {
+        builder.buildCompositeIndex();
+        if(is_unique) {
+          builder.unique().buildCompositeIndex();
+        }
+      }else {
+        builder.buildMixedIndex(indexer_id);
+      }
       mgmt.commit();
       
       //Wait for the index to become available
-      mgmt.awaitGraphIndexStatus(graph, index_name).call();
+      ManagementSystem.awaitGraphIndexStatus(graph, index_name).call();
 
       // //Reindex the existing data
       // mgmt = graph.openManagement()
       // mgmt.updateIndex(mgmt.getGraphIndex("whenFromIndex"), SchemaAction.REINDEX).get()
-      // mgmt.commit()
+
+      mgmt.commit();
     };
 
-    configTags = { ->
-      graph.tx().rollback();
-      def mgmt = graph.openManagement();
-      def key_name = "tags";
-      if(mgmt.containsPropertyKey(key_name)) return;
-      mgmt.makePropertyKey(key_name).dataType(String.class).cardinality(Cardinality.SET).make();
-      mgmt.commit();
-
-      def index_name = key_name + "_index";
-      mgmt = graph.openManagement();
-      if(mgmt.containsGraphIndex(index_name)) return;
-      mgmt.buildIndex(index_name, Vertex.class).addKey(mgmt.getPropertyKey(key_name)).buildCompositeIndex();
-      mgmt.commit();
-      mgmt.awaitGraphIndexStatus(graph, "tags_index").call();
-    };
-
-    configWhereName = { ->
-      graph.tx().rollback();
-      def key_name = "where_name";
-      def mgmt = graph.openManagement();
-      if(mgmt.containsPropertyKey(key_name)) return;
-      mgmt.makePropertyKey(key_name).dataType(String.class).make();
-      mgmt.commit();
-
-      mgmt = graph.openManagement();
-      def index_name = key_name + "_index";
-      if(mgmt.containsGraphIndex(index_name)) return;
-      mgmt.buildIndex(index_name, Vertex.class).
-        addKey(mgmt.getPropertyKey(key_name)).unique().buildCompositeIndex();
-      mgmt.commit();
-      mgmt.awaitGraphIndexStatus(graph, index_name).call();
-    }; 
-
-    configTags();
-    makeMixedIndex("title", String.class);
-    makeMixedIndex("body", String.class);
-    configWhereName();
+    makePropKey("tags", String.class, Cardinality.SET);
+    makeIndex(["tags"], Vertex.class);
+    makePropKey("title", String.class);
+    makeIndex(["title"], Vertex.class, "search");
+    makePropKey("body", String.class);
+    makeIndex(["body"], Vertex.class, "search");
+    makePropKey("where_name", String.class);
+    makeIndex(["where_name"], Vertex.class, null, true);
   }
 ] as LifeCycleHook
 
