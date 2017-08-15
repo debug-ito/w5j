@@ -96,4 +96,10 @@ buildQueryWith buildCond buildOBy query = do
       ga <- buildCondTree a
       return (".not(__" <> ga <> ")")
     buildCondTree (QCondLeaf c) = buildCond c
+    -- TODO: if the leaf is the root and c is a transformation
+    -- traversal, the resulting traversal is also
+    -- transformation. Unlike that, all other cases (And, Or, Not,
+    -- True) are always filtering traversals without transformation.
+    -- Is this OK? Maybe we have to enclose the whole condition with
+    -- .filter() traversal method.
     buildCondTree (QCondTrue) = return ".identity()"
