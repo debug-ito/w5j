@@ -59,9 +59,9 @@ buildQuery :: QueryWhat -> GBuilder Gremlin
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   start <- makeStart
-  return $ GStep.gremlinStep (start >>> traversal)
+  return $ GStep.toGremlin (start GStep.@. traversal)
   where
-    makeStart = return (GStep.allVertices >>> GStep.hasLabel "'what'")
+    makeStart = return (GStep.allVertices GStep.@. GStep.hasLabel "'what'")
     buildCond (QCondTerm t) = do
       vt <- newPlaceHolder t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
@@ -80,11 +80,11 @@ buildQuery query = do
       return $ GStep.orderBy [byWhen "when_from", byWhen "when_to", commonBy]
       where
         byWhen edge_label =
-          (GStep.unsafeGStep ("optionalT(out('" <> edge_label <> "'))"), comparator)
+          (GStep.unsafeFromGremlin ("optionalT(out('" <> edge_label <> "'))"), comparator)
         comparator = case order of
           QOrderAsc -> "compareOptWhenVertices"
           QOrderDesc -> "compareOptWhenVertices.reversed()"
         commonBy = -- ".by('updated_at', " <> orderComparator order <> ")"
-          (GStep.unsafeGStep "values('updated_at')", orderComparator order)
+          (GStep.unsafeFromGremlin "values('updated_at')", orderComparator order)
           -- TODO: make values GStep.
       
