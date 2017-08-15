@@ -53,7 +53,7 @@ globals["hook"] = [
     ["what", "when", "where", "how", "who"].each { l -> makeVertexLabel(l); };
     makeEdgeLabel("when_from", Multiplicity.ONE2ONE);
     makeEdgeLabel("when_to", Multiplicity.ONE2ONE);
-    makeEdgeLabel("where", Multiplicity.MANY2ONE);
+    makeEdgeLabel("where", Multiplicity.SIMPLE);
     makePropKey("tags", String.class, Cardinality.SET);
     makeIndex(["tags"], Vertex.class);
     makePropKey("title", String.class);
