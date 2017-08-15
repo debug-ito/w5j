@@ -1,4 +1,5 @@
 import com.thinkaurelius.titan.graphdb.database.management.ManagementSystem;
+import java.time.temporal.ChronoUnit;
 
 def globals = [:];
 
@@ -40,9 +41,19 @@ globals["hook"] = [
         builder.buildMixedIndex(indexer_id);
       }
       mgmt.commit();
+
+      ManagementSystem.awaitGraphIndexStatus(graph, index_name).
+        status(SchemaStatus.REGISTERED).call();
+
+      // enable index
+      // https://stackoverflow.com/questions/37563794/titan-1-0-mixed-index-is-not-working-with-warning-query-requires-iterating-ove
+      mgmt = graph.openManagement();
+      mgmt.updateIndex(mgmt.getGraphIndex(index_name), SchemaAction.ENABLE_INDEX).get();
+      mgmt.commit();
       
       //Wait for the index to become available
-      ManagementSystem.awaitGraphIndexStatus(graph, index_name).call();
+      ManagementSystem.awaitGraphIndexStatus(graph, index_name).
+        status(SchemaStatus.ENABLED).timeout(10, ChronoUnit.MINUTES).call();
 
       // //Reindex the existing data
       // mgmt = graph.openManagement()
