@@ -44,7 +44,8 @@ qRangeMax :: QRange -> Int
 qRangeMax = sup . unQRange
 
 
--- | condition tree. type @c@ is the leaf condition type.
+-- | condition tree. type @c@ is the leaf condition type, which is
+-- specific to the data structure you are querying for.
 data QCondTree c = QCondTrue
                  | QCondLeaf c
                  | QCondAnd (QCondTree c) (QCondTree c)
@@ -73,7 +74,11 @@ data Query c b =
   deriving (Show,Eq,Ord)
 
 buildQueryWith :: (c -> GBuilder Gremlin)
+               -- ^ generate Gremlin step for the leaf condition
+               -- @c@. It must be a __filtering step__, i.e., its
+               -- output type must be the same as the input type.
                -> (QOrder -> b -> GBuilder Gremlin)
+               -- ^ generate Gremlin @.by@ step(s) for ordering.
                -> Query c b
                -> GBuilder Gremlin
 buildQueryWith buildCond buildOBy query = do
@@ -90,16 +95,13 @@ buildQueryWith buildCond buildOBy query = do
       ga <- buildCondTree a
       gb <- buildCondTree b
       return (". " <> method <> "(__" <> ga <> ", __" <> gb <> ")")
-    buildCondTree (QCondAnd a b) = buildBinaryCond "and" a b
     buildCondTree (QCondOr a b) = buildBinaryCond "or" a b
+    buildCondTree (QCondAnd a b) = do
+      ga <- buildCondTree a
+      gb <- buildCondTree b
+      return (ga <> gb)
     buildCondTree (QCondNot a) = do
       ga <- buildCondTree a
       return (".not(__" <> ga <> ")")
     buildCondTree (QCondLeaf c) = buildCond c
-    -- TODO: if the leaf is the root and c is a transformation
-    -- traversal, the resulting traversal is also
-    -- transformation. Unlike that, all other cases (And, Or, Not,
-    -- True) are always filtering traversals without transformation.
-    -- Is this OK? Maybe we have to enclose the whole condition with
-    -- .filter() traversal method.
     buildCondTree (QCondTrue) = return ".identity()"
