@@ -61,13 +61,11 @@ buildQuery query = do
   start <- makeStart
   return $ GStep.gremlinStep (start >>> traversal)
   where
-    makeStart :: GBuilder (GStep.GStep () GStep.Vertex)
     makeStart = return (GStep.allVertices >>> GStep.hasLabel "'what'")
-    buildCond :: QCond -> GBuilder (GStep.GStep GStep.Vertex GStep.Vertex)
     buildCond (QCondTerm t) = do
       vt <- newPlaceHolder t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
-      return $ GStep.or $ map GStep.outVoid
+      return $ GStep.or $
         [ GStep.has "'title'" ("textContains(" <> vt <> ")"),
           GStep.has "'body'"  ("textContains(" <> vt <> ")"),
           GStep.has "'tags'"  ("eq(" <> vt <> ")")

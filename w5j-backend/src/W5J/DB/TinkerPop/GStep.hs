@@ -35,6 +35,7 @@ import Control.Category (Category)
 import qualified Control.Category as Category
 import Data.Monoid ((<>), mconcat)
 import qualified Data.Text as T
+import Data.Void (Void)
 import W5J.DB.TinkerPop.IO.Connection (Gremlin)
 
 -- | A Gremlin Step (method call) that takes data @s@ from upstream
@@ -71,14 +72,13 @@ gremlinStep = unGStep
 outVoid :: GStep s e -> GStep s ()
 outVoid = GStep . unGStep
 
--- todo: make the source type Void, so that it won't compose with
--- anything else.
-allVertices :: GStep () Vertex
+-- | Source is Void. It isn't preceded by any step.
+allVertices :: GStep Void Vertex
 allVertices = unsafeGStep "g.V()"
 
 vertexByID :: Gremlin
               -- ^ Gremlin code for vertex ID.
-           -> GStep () Vertex
+           -> GStep Void Vertex
 vertexByID vid = unsafeGStep ("g.V(" <> vid <> ")")
 
 -- | @.identity@ step.
@@ -109,14 +109,14 @@ hasLabel :: Gremlin -- ^ expected label name
 hasLabel l = unsafeGStep (".hasLabel(" <> l <> ")")
 
 -- | @.or@ step.
-or :: [GStep s ()] -> GStep s s
+or :: [GStep s e] -> GStep s s
 or conds = unsafeGStep (".or(" <> conds_g <> ")")
   where
     conds_g = T.intercalate ", " $ map toG conds
     toG cond = "__" <> gremlinStep cond
 
 -- | @.not@ step.
-not :: GStep s () -> GStep s s
+not :: GStep s e -> GStep s s
 not cond = unsafeGStep (".not(__" <> gremlinStep cond <> ")")
 
 -- | @.range@ step.
@@ -128,7 +128,7 @@ range :: Gremlin
 range min_g max_g = unsafeGStep (".range(" <> min_g <> ", " <> max_g <> ")")
 
 -- | @.order@ and @.by@ steps
-orderBy :: [(GStep s (), Gremlin)]
+orderBy :: [(GStep s e, Gremlin)]
            -- ^ (accessor steps, comparator) of each @.by@
         -> GStep s s
 orderBy bys = unsafeGStep (".order()" <> bys_g)
