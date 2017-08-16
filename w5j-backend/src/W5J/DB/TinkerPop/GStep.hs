@@ -32,7 +32,9 @@ module W5J.DB.TinkerPop.GStep
          not,
          range,
          -- ** Sorting step
-         orderBy
+         orderBy,
+         -- ** Transformation step
+         flatMap
        ) where
 
 import Prelude hiding (or, filter, not)
@@ -47,8 +49,13 @@ import W5J.DB.TinkerPop.IO.Connection (Gremlin)
 newtype GTraversal s e = GTraversal { unGTraversal :: Gremlin }
                        deriving (Show)
 
--- TODO: make GTraversal a Category with flatMap step.
+-- | 'id' is @__.identity()@. '(.)' compose 'GTraversal's by
+-- @.flatMap@ step.
+instance Category GTraversal where
+  id = toGTraversal identity
+  a . b = b @. flatMap a
 
+-- | Something that is isomorphic to 'Gremlin'.
 class GremlinLike g where
   unsafeFromGremlin :: Gremlin -> g
   toGremlin :: g -> Gremlin
@@ -174,3 +181,7 @@ orderBy bys = unsafeFromGremlin (".order()" <> bys_g)
     bys_g = mconcat $ map toG bys
     toG (accessor, comparator) =
       ".by(" <> (toGremlin $ toGTraversal accessor) <> ", " <> comparator <> ")"
+
+-- | @.flatMap@ step
+flatMap :: ToGTraversal g => g s e -> GStep s e
+flatMap gt = unsafeFromGremlin (".flatMap(" <> (toGremlin $ toGTraversal gt) <> ")")
