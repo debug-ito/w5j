@@ -14,7 +14,7 @@ module W5J.DB.TinkerPop.GStep
          ToGTraversal(..),
          -- ** Step markers,
          Filter,
-         Any,
+         General,
          -- ** Types in Gremlin
          Vertex,
          Edge,
@@ -75,7 +75,7 @@ newtype GStep c s e = GStep { unGStep :: Gremlin }
 
 -- | 'id' is 'identity'.
 instance Category (GStep c) where
-  id = identity
+  id = forgetFilter identity
   bc . ab = unsafeFromGremlin (unGStep ab <> unGStep bc)
 
 -- | Unsafely convert output type
@@ -103,7 +103,7 @@ newtype GTraversal c s e = GTraversal { unGTraversal :: Gremlin }
 -- | 'id' is @__.identity()@. '(.)' compose 'GTraversal's by
 -- @.flatMap@ step.
 instance Category (GTraversal c) where
-  id = toGTraversal identity
+  id = toGTraversal $ forgetFilter identity
   a . b = b @. flatMap a
 
 -- | Unsafely convert output type.
@@ -122,8 +122,8 @@ instance GremlinLike (GTraversal c s e) where
 -- | Types that can convert to 'GTraversal'.
 class ToGTraversal g where
   toGTraversal :: g c s e -> GTraversal c s e
-  forgetFilter :: g Filter s e -> g Any s e
-  -- ^ Treat a filtering step/traversal as a general step. Use this
+  forgetFilter :: g Filter s e -> g c s e
+  -- ^ Treat a filtering step/traversal as any type of step. Use this
   -- for type matching.
 
 instance ToGTraversal GTraversal where
@@ -140,17 +140,17 @@ instance ToGTraversal GTraversal where
 data Filter
 
 -- | Type marker for any steps, whether it's filtering or not.
-data Any
+data General
 
 unsafeGTraversal :: Gremlin -> GTraversal c s e
 unsafeGTraversal = GTraversal
 
-allVertices :: GTraversal Any Void Vertex
+allVertices :: GTraversal General Void Vertex
 allVertices = unsafeFromGremlin "g.V()"
 
 vertexByID :: Gremlin
               -- ^ Gremlin code for vertex ID.
-           -> GTraversal Any Void Vertex
+           -> GTraversal General Void Vertex
 vertexByID vid = unsafeFromGremlin ("g.V(" <> vid <> ")")
 
 infixl 5 @.
@@ -263,19 +263,19 @@ orderBy bys = unsafeFromGremlin (".order()" <> bys_g)
 flatMap :: ToGTraversal g => g c s e -> GStep c s e
 flatMap gt = unsafeFromGremlin (".flatMap(" <> (toGremlin $ toGTraversal gt) <> ")")
 
-unsafeTransformStep :: (a -> b) -> Gremlin -> GStep Any a b
+unsafeTransformStep :: (a -> b) -> Gremlin -> GStep General a b
 unsafeTransformStep _ = unsafeGStep
 
 -- | @.values@ step.
 values :: Element s
        => [Gremlin]
        -- ^ property keys
-       -> GStep Any s PropertyValue
+       -> GStep General s PropertyValue
 values keys = unsafeTransformStep (getPropertyValue "DUMMY") (".values(" <> keys_g <> ")")
   where
     keys_g = T.intercalate ", " keys
 
-genericTraversalStep :: Gremlin -> [Gremlin] -> GStep Any Vertex e
+genericTraversalStep :: Gremlin -> [Gremlin] -> GStep General Vertex e
 genericTraversalStep method_name edge_labels =
   unsafeFromGremlin ("." <> method_name <> "(" <> labels_g <> ")")
   where
@@ -283,19 +283,19 @@ genericTraversalStep method_name edge_labels =
 
 -- | @.out@ step
 out :: [Gremlin] -- ^ edge labels
-    -> GStep Any Vertex Vertex
+    -> GStep General Vertex Vertex
 out = genericTraversalStep "out"
 
 -- | @.outE@ step
 outE :: [Gremlin] -- ^ edge labels
-     -> GStep Any Vertex Edge
+     -> GStep General Vertex Edge
 outE = genericTraversalStep "outE"
 
 -- | @.in@ step (@in@ is reserved by Haskell..)
 inS :: [Gremlin] -- ^ edge labels
-    -> GStep Any Vertex Vertex
+    -> GStep General Vertex Vertex
 inS = genericTraversalStep "in"
 
 inE :: [Gremlin] -- ^ edge labels
-    -> GStep Any Vertex Edge
+    -> GStep General Vertex Edge
 inE = genericTraversalStep "inE"
