@@ -76,15 +76,25 @@ data Query c b =
         }
   deriving (Show,Eq,Ord)
 
+
+
+-- TODO: 考えてみれば、inputとoutputが同じ型だからといってfilter系step
+-- とは限らない。VertexとかEdgeとかの粒度だったら、traverseするのだっ
+-- てinputとoutputが同じになりうる。GStepとGTraverseにもう一つ型パラメー
+-- タ持たせて、filter系とそれ以外を区別するのがいいのでは。filter系
+-- stepはインデックスにも絡むから重要だと思う。区別する意味はあるはず。
+
+
+
 -- | Generate a filtering 'GStep' (i.e. a method call chain) from the
 -- 'Query'.
-buildQueryWith :: (c -> GBuilder (GStep s s))
+buildQueryWith :: (c -> GBuilder (GStep GStep.Filter s s))
                -- ^ generate Gremlin step for the leaf condition @c@.
-               -> (QOrder -> b -> GBuilder (GStep s s))
+               -> (QOrder -> b -> GBuilder (GStep GStep.Filter s s))
                -- ^ generate Gremlin @.order@ and @.by@ step(s) for
                -- ordering.
                -> Query c b
-               -> GBuilder (GStep s s)
+               -> GBuilder (GStep GStep.Filter s s)
 buildQueryWith buildCond buildOBy query = do
   gremlin_cond <- buildCondTree $ queryCond query
   gremlin_orderby <- buildOBy (queryOrder query) (queryOrderBy query)

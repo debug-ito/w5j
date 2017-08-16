@@ -61,9 +61,9 @@ buildQuery :: QueryWhat -> GBuilder Gremlin
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   start <- makeStart
-  return $ GStep.toGremlin (start @. traversal)
+  return $ GStep.toGremlin (start @. GStep.forgetFilter traversal)
   where
-    makeStart = return (GStep.allVertices @. GStep.hasLabel ["'what'"])
+    makeStart = return (GStep.allVertices @. GStep.forgetFilter GStep.hasLabel ["'what'"])
     buildCond (QCondTerm t) = do
       vt <- newPlaceHolder t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
@@ -77,7 +77,7 @@ buildQuery query = do
       return $ GStep.has "'tags'" ("eq(" <> vt <> ")")
     buildCond (QCondWhereID where_id) = do
       vid <- newPlaceHolder where_id
-      return $ GStep.filter (GStep.out ["'where'"] >>> GStep.hasId [vid])
+      return $ GStep.filter (GStep.out ["'where'"] >>> GStep.hasId [vid]) -- TODO: こいつのテストから。
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
