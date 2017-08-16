@@ -24,8 +24,6 @@ module W5J.DB.TinkerPop.GStep
          unsafeGTraversal,
          -- * GStep
          unsafeGStep,
-         -- ** Conversion
-         outVoid,
          -- ** Filter step
          identity,
          filterL,
@@ -64,6 +62,10 @@ newtype GTraversal s e = GTraversal { unGTraversal :: Gremlin }
 instance Category GTraversal where
   id = toGTraversal identity
   a . b = b @. flatMap a
+
+-- | Unsafely convert output type.
+instance Functor (GTraversal s) where
+  fmap _ = GTraversal . unGTraversal
 
 -- | Something that is isomorphic to 'Gremlin'.
 class GremlinLike g where
@@ -114,6 +116,10 @@ instance Category GStep where
   id = identity
   bc . ab = unsafeFromGremlin (unGStep ab <> unGStep bc)
 
+-- | Unsafely convert output type
+instance Functor (GStep s) where
+  fmap _ = GStep . unGStep
+
 -- | Call static method versions of the 'GStep' on @__@ class.
 instance ToGTraversal GStep where
   toGTraversal step = unsafeFromGremlin ("__" <> toGremlin step)
@@ -139,10 +145,6 @@ data PropertyValue
 
 unsafeGStep :: Gremlin -> GStep s e
 unsafeGStep = GStep
-
--- | Ignore the output.
-outVoid :: GStep s e -> GStep s ()
-outVoid = GStep . unGStep
 
 -- | @.identity@ step.
 identity :: GStep s s

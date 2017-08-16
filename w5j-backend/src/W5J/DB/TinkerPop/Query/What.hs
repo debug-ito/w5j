@@ -13,6 +13,7 @@ module W5J.DB.TinkerPop.Query.What
        ) where
 
 import Control.Category ((>>>))
+import Control.Monad (void)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 
@@ -85,5 +86,5 @@ buildQuery query = do
           QOrderAsc -> "compareOptWhenVertices"
           QOrderDesc -> "compareOptWhenVertices.reversed()"
         commonBy =
-          (GStep.toGTraversal $ GStep.outVoid $ GStep.values ["'updated_at'"], orderComparator order)
+          (GStep.toGTraversal $ void $ GStep.values ["'updated_at'"], orderComparator order)
       
