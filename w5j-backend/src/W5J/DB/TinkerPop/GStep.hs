@@ -135,7 +135,9 @@ data Vertex
 data Edge
 
 -- | Element interface in a TinkerPop graph.
-class Element e
+class Element e where
+  getPropertyValue :: Gremlin -> e -> PropertyValue
+  getPropertyValue = error "This is a phantom method to suppress redundant-constaint warning. Do not evaluate this!"
 
 instance Element Vertex
 instance Element Edge
@@ -207,12 +209,15 @@ orderBy bys = unsafeFromGremlin (".order()" <> bys_g)
 flatMap :: ToGTraversal g => g s e -> GStep s e
 flatMap gt = unsafeFromGremlin (".flatMap(" <> (toGremlin $ toGTraversal gt) <> ")")
 
+unsafeTransformStep :: (a -> b) -> Gremlin -> GStep a b
+unsafeTransformStep _ = unsafeGStep
+
 -- | @.values@ step.
 values :: Element s
        => [Gremlin]
        -- ^ property keys
        -> GStep s PropertyValue
-values keys = unsafeFromGremlin (".values(" <> keys_g <> ")")
+values keys = unsafeTransformStep (getPropertyValue "DUMMY") (".values(" <> keys_g <> ")")
   where
     keys_g = T.intercalate ", " keys
 
