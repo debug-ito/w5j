@@ -76,6 +76,8 @@ data Query c b =
         }
   deriving (Show,Eq,Ord)
 
+-- | Generate a filtering 'GStep' (i.e. a method call chain) from the
+-- 'Query'.
 buildQueryWith :: (c -> GBuilder (GStep s s))
                -- ^ generate Gremlin step for the leaf condition @c@.
                -> (QOrder -> b -> GBuilder (GStep s s))
@@ -96,13 +98,13 @@ buildQueryWith buildCond buildOBy query = do
     buildCondTree (QCondOr a b) = do
       ga <- buildCondTree a
       gb <- buildCondTree b
-      return $ GStep.or $ map GStep.outVoid $ [ga, gb]
+      return $ GStep.or [ga, gb]
     buildCondTree (QCondAnd a b) = do
       ga <- buildCondTree a
       gb <- buildCondTree b
       return (ga >>> gb)
     buildCondTree (QCondNot a) = do
       ga <- buildCondTree a
-      return $ GStep.not $ GStep.outVoid ga
+      return $ GStep.not ga
     buildCondTree (QCondLeaf c) = buildCond c
     buildCondTree (QCondTrue) = return $ GStep.identity
