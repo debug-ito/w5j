@@ -50,6 +50,7 @@ import Prelude hiding (or, filter, not)
 import Control.Category (Category)
 import qualified Control.Category as Category
 import Data.Monoid ((<>), mconcat)
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Void (Void)
 import W5J.DB.TinkerPop.IO.Connection (Gremlin)
@@ -139,12 +140,19 @@ data Edge
 class Element e where
   getPropertyValue :: Gremlin -> e -> PropertyValue
   getPropertyValue = error "This is a phantom method to suppress redundant-constaint warning. Do not evaluate this!"
+  getElementID :: e -> ElementID
+  getElementID = error "This is a phantom method to suppress redundant-constaint warning. Do not evaluate this!"
+  getLabel :: e -> Text
+  getLabel = error "This is a phantom method to suppress redundant-constaint warning. Do not evaluate this!"
 
 instance Element Vertex
 instance Element Edge
 
 -- | Value object in a TinkerPop graph.
 data PropertyValue
+
+-- | ID object type for Elements
+data ElementID
 
 unsafeGStep :: Gremlin -> GStep s e
 unsafeGStep = GStep
@@ -163,29 +171,34 @@ filterL block = unsafeFromGremlin (".filter({" <> block <> "})")
 filter :: ToGTraversal g => g s e -> GStep s s
 filter step = unsafeFromGremlin (".filter(" <> (toGremlin $ toGTraversal step) <> ")")
 
+unsafeFilterStep :: (s -> a) -> Gremlin -> GStep s s
+unsafeFilterStep _ = unsafeGStep
+
 -- | @.has@ step.
-has :: Gremlin
-    -- ^ target
-    -> Gremlin
-    -- ^ expectation
+has :: Element s
+    => Gremlin -- ^ target
+    -> Gremlin -- ^ expectation
     -> GStep s s
-has target expec = unsafeFromGremlin (".has(" <> target <> ", " <> expec <> ")")
+has target expec = unsafeFilterStep (getPropertyValue target) (".has(" <> target <> ", " <> expec <> ")")
 
 genericMultiArgFilter :: Gremlin -- ^ method name
+                      -> (s -> a) -- ^ phantom filtering accessor
                       -> [Gremlin] -- ^ arguments
                       -> GStep s s
-genericMultiArgFilter method_name args = unsafeFromGremlin ("." <> method_name <> "(" <> args_g <> ")")
+genericMultiArgFilter method_name f args = unsafeFilterStep f ("." <> method_name <> "(" <> args_g <> ")")
   where
     args_g = T.intercalate ", " args
 
 -- | @.hasLabel@ step
-hasLabel :: [Gremlin] -- ^ expected label names
+hasLabel :: Element s
+         => [Gremlin] -- ^ expected label names
          -> GStep s s
-hasLabel = genericMultiArgFilter "hasLabel"
+hasLabel = genericMultiArgFilter "hasLabel" getLabel
 
-hasId :: [Gremlin] -- ^ expected IDs
+hasId :: Element s
+      => [Gremlin] -- ^ expected IDs
       -> GStep s s
-hasId = genericMultiArgFilter "hasId"
+hasId = genericMultiArgFilter "hasId" getElementID
 
 -- | @.or@ step.
 or :: ToGTraversal g => [g s e] -> GStep s s
