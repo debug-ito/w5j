@@ -30,6 +30,7 @@ module W5J.DB.TinkerPop.GStep
          filter,
          has,
          hasLabel,
+         hasId,
          or,
          not,
          range,
@@ -170,10 +171,21 @@ has :: Gremlin
     -> GStep s s
 has target expec = unsafeFromGremlin (".has(" <> target <> ", " <> expec <> ")")
 
+genericMultiArgFilter :: Gremlin -- ^ method name
+                      -> [Gremlin] -- ^ arguments
+                      -> GStep s s
+genericMultiArgFilter method_name args = unsafeFromGremlin ("." <> method_name <> "(" <> args_g <> ")")
+  where
+    args_g = T.intercalate ", " args
+
 -- | @.hasLabel@ step
-hasLabel :: Gremlin -- ^ expected label name
+hasLabel :: [Gremlin] -- ^ expected label names
          -> GStep s s
-hasLabel l = unsafeFromGremlin (".hasLabel(" <> l <> ")")
+hasLabel = genericMultiArgFilter "hasLabel"
+
+hasId :: [Gremlin] -- ^ expected IDs
+      -> GStep s s
+hasId = genericMultiArgFilter "hasId"
 
 -- | @.or@ step.
 or :: ToGTraversal g => [g s e] -> GStep s s

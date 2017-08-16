@@ -18,6 +18,7 @@ import Data.Monoid ((<>))
 import Data.Text (Text)
 
 import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder, Gremlin)
+import W5J.DB.TinkerPop.GStep ((@.))
 import qualified W5J.DB.TinkerPop.GStep as GStep
 import W5J.DB.TinkerPop.Query.Common
   ( Query, QOrder(..),
@@ -60,9 +61,9 @@ buildQuery :: QueryWhat -> GBuilder Gremlin
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   start <- makeStart
-  return $ GStep.toGremlin (start GStep.@. traversal)
+  return $ GStep.toGremlin (start @. traversal)
   where
-    makeStart = return (GStep.allVertices GStep.@. GStep.hasLabel "'what'")
+    makeStart = return (GStep.allVertices @. GStep.hasLabel ["'what'"])
     buildCond (QCondTerm t) = do
       vt <- newPlaceHolder t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
@@ -74,7 +75,9 @@ buildQuery query = do
     buildCond (QCondTag t) = do
       vt <- newPlaceHolder t
       return $ GStep.has "'tags'" ("eq(" <> vt <> ")")
-    buildCond (QCondWhereID _) = undefined -- TODO
+    buildCond (QCondWhereID where_id) = do
+      vid <- newPlaceHolder where_id
+      return $ GStep.filter (GStep.out ["'where'"] >>> GStep.hasId [vid])
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
