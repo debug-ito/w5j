@@ -26,7 +26,7 @@ import Control.Category ((>>>))
 
 import W5J.Interval (Interval, sup, inf, (...))
 import W5J.DB.TinkerPop.GBuilder (GBuilder, Gremlin, newPlaceHolder)
-import W5J.DB.TinkerPop.GStep (GStep)
+import W5J.DB.TinkerPop.GStep (GStep, Filter)
 import qualified W5J.DB.TinkerPop.GStep as GStep
 
 -- | Range of elements indices to query. Min is inclusive, max is
@@ -77,24 +77,15 @@ data Query c b =
   deriving (Show,Eq,Ord)
 
 
-
--- TODO: 考えてみれば、inputとoutputが同じ型だからといってfilter系step
--- とは限らない。VertexとかEdgeとかの粒度だったら、traverseするのだっ
--- てinputとoutputが同じになりうる。GStepとGTraverseにもう一つ型パラメー
--- タ持たせて、filter系とそれ以外を区別するのがいいのでは。filter系
--- stepはインデックスにも絡むから重要だと思う。区別する意味はあるはず。
-
-
-
 -- | Generate a filtering 'GStep' (i.e. a method call chain) from the
 -- 'Query'.
-buildQueryWith :: (c -> GBuilder (GStep GStep.Filter s s))
+buildQueryWith :: (c -> GBuilder (GStep Filter s s))
                -- ^ generate Gremlin step for the leaf condition @c@.
-               -> (QOrder -> b -> GBuilder (GStep GStep.Filter s s))
+               -> (QOrder -> b -> GBuilder (GStep Filter s s))
                -- ^ generate Gremlin @.order@ and @.by@ step(s) for
                -- ordering.
                -> Query c b
-               -> GBuilder (GStep GStep.Filter s s)
+               -> GBuilder (GStep Filter s s)
 buildQueryWith buildCond buildOBy query = do
   gremlin_cond <- buildCondTree $ queryCond query
   gremlin_orderby <- buildOBy (queryOrder query) (queryOrderBy query)
