@@ -85,6 +85,5 @@ buildQuery query = do
           QOrderAsc -> "compareOptWhenVertices"
           QOrderDesc -> "compareOptWhenVertices.reversed()"
         commonBy =
-          (GStep.unsafeGTraversal "values('updated_at')", orderComparator order)
-          -- TODO: make ".values" GStep.
+          (GStep.toGTraversal $ GStep.outVoid $ GStep.values ["'updated_at'"], orderComparator order)
       

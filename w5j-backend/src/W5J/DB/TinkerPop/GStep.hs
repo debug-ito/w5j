@@ -7,12 +7,16 @@
 -- 
 module W5J.DB.TinkerPop.GStep
        ( -- * Type
+         -- ** Gremlin Traversals and Steps
          GTraversal,
          GremlinLike(..),
          ToGTraversal(..),
          GStep,
+         -- ** Types in Gremlin
          Vertex,
          Edge,
+         Element,
+         PropertyValue,
          -- * GTraversal
          (@.),
          allVertices,
@@ -34,7 +38,13 @@ module W5J.DB.TinkerPop.GStep
          -- ** Sorting step
          orderBy,
          -- ** Transformation step
-         flatMap
+         flatMap,
+         values,
+         -- ** Graph traversal step
+         out,
+         outE,
+         inS,
+         inE
        ) where
 
 import Prelude hiding (or, filter, not)
@@ -118,6 +128,15 @@ data Vertex
 -- | Edge in a TinkerPop graph.
 data Edge
 
+-- | Element interface in a TinkerPop graph.
+class Element e
+
+instance Element Vertex
+instance Element Edge
+
+-- | Value object in a TinkerPop graph.
+data PropertyValue
+
 unsafeGStep :: Gremlin -> GStep s e
 unsafeGStep = GStep
 
@@ -185,3 +204,37 @@ orderBy bys = unsafeFromGremlin (".order()" <> bys_g)
 -- | @.flatMap@ step
 flatMap :: ToGTraversal g => g s e -> GStep s e
 flatMap gt = unsafeFromGremlin (".flatMap(" <> (toGremlin $ toGTraversal gt) <> ")")
+
+-- | @.values@ step.
+values :: Element s
+       => [Gremlin]
+       -- ^ property keys
+       -> GStep s PropertyValue
+values keys = unsafeFromGremlin (".values(" <> keys_g <> ")")
+  where
+    keys_g = T.intercalate ", " keys
+
+genericTraversalStep :: Gremlin -> [Gremlin] -> GStep Vertex e
+genericTraversalStep method_name edge_labels =
+  unsafeFromGremlin ("." <> method_name <> "(" <> labels_g <> ")")
+  where
+    labels_g = T.intercalate ", " edge_labels
+
+-- | @.out@ step
+out :: [Gremlin] -- ^ edge labels
+    -> GStep Vertex Vertex
+out = genericTraversalStep "out"
+
+-- | @.outE@ step
+outE :: [Gremlin] -- ^ edge labels
+     -> GStep Vertex Edge
+outE = genericTraversalStep "outE"
+
+-- | @.in@ step (@in@ is reserved by Haskell..)
+inS :: [Gremlin] -- ^ edge labels
+    -> GStep Vertex Vertex
+inS = genericTraversalStep "in"
+
+inE :: [Gremlin] -- ^ edge labels
+    -> GStep Vertex Edge
+inE = genericTraversalStep "inE"
