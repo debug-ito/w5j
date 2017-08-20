@@ -294,3 +294,9 @@ inS = genericTraversalStep "in"
 inE :: [GScript] -- ^ edge labels
     -> GStep General Vertex Edge
 inE = genericTraversalStep "inE"
+
+---- -- probably we can implement .as() step like this. GBuilder generates
+---- -- some 'Label', which is passed to .as() step and can be passed later
+---- -- to .select() step etc.
+---- as :: GBuilder (Label, GStep Filter s s)
+---- as = undefined
