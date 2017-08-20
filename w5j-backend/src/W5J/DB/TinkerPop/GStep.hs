@@ -10,7 +10,7 @@ module W5J.DB.TinkerPop.GStep
          -- ** Gremlin Traversals and Steps
          GStep,
          GTraversal,
-         GremlinLike(..),
+         GScriptLike(..),
          ToGTraversal(..),
          -- ** Step markers,
          Filter,
@@ -58,7 +58,7 @@ import Data.Monoid ((<>), mconcat)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Void (Void)
-import W5J.DB.TinkerPop.IO.Connection (Gremlin)
+import W5J.DB.TinkerPop.GScript (GScript, gRaw, gMethodCall)
 
 
 -- | A Gremlin Step (method call) that takes data @s@ from upstream
@@ -70,13 +70,13 @@ import W5J.DB.TinkerPop.IO.Connection (Gremlin)
 -- 'GStep' is not an 'Eq', because it's difficult to define true
 -- equality between Gremlin method calls. If we define it naively, it
 -- might have conflict with 'Category' law.
-newtype GStep c s e = GStep { unGStep :: Gremlin }
+newtype GStep c s e = GStep { unGStep :: GScript }
                     deriving (Show)
 
 -- | 'id' is 'identity'.
 instance Category (GStep c) where
   id = forgetFilter identity
-  bc . ab = unsafeFromGremlin (unGStep ab <> unGStep bc)
+  bc . ab = unsafeFromGScript (unGStep ab <> unGStep bc)
 
 -- | Unsafely convert output type
 instance Functor (GStep c s) where
@@ -84,12 +84,12 @@ instance Functor (GStep c s) where
 
 -- | Call static method versions of the 'GStep' on @__@ class.
 instance ToGTraversal GStep where
-  toGTraversal step = unsafeFromGremlin ("__" <> toGremlin step)
+  toGTraversal step = unsafeFromGScript (gRaw "__" <> toGScript step)
   forgetFilter = GStep . unGStep
 
-instance GremlinLike (GStep c s e) where
-  unsafeFromGremlin = GStep
-  toGremlin = unGStep
+instance GScriptLike (GStep c s e) where
+  unsafeFromGScript = GStep
+  toGScript = unGStep
 
 
 -- | GraphTraversal class object of TinkerPop.
@@ -97,7 +97,7 @@ instance GremlinLike (GStep c s e) where
 -- 'GTraversal' is practically the same as 'GStep'. 'GTraversal' is a
 -- Java-object in Gremlin domain, while 'GStep' is a chain of method
 -- calls.
-newtype GTraversal c s e = GTraversal { unGTraversal :: Gremlin }
+newtype GTraversal c s e = GTraversal { unGTraversal :: GScript }
                          deriving (Show)
                                   
 -- | 'id' is @__.identity()@. '(.)' compose 'GTraversal's by
@@ -110,14 +110,14 @@ instance Category (GTraversal c) where
 instance Functor (GTraversal c s) where
   fmap _ = GTraversal . unGTraversal
 
--- | Something that is isomorphic to 'Gremlin'.
-class GremlinLike g where
-  unsafeFromGremlin :: Gremlin -> g
-  toGremlin :: g -> Gremlin
+-- | Something that is isomorphic to 'GScript'.
+class GScriptLike g where
+  unsafeFromGScript :: GScript -> g
+  toGScript :: g -> GScript
 
-instance GremlinLike (GTraversal c s e) where
-  unsafeFromGremlin = GTraversal
-  toGremlin = unGTraversal
+instance GScriptLike (GTraversal c s e) where
+  unsafeFromGScript = GTraversal
+  toGScript = unGTraversal
 
 -- | Types that can convert to 'GTraversal'.
 class ToGTraversal g where
@@ -142,21 +142,21 @@ data Filter
 -- | Type marker for any steps, whether it's filtering or not.
 data General
 
-unsafeGTraversal :: Gremlin -> GTraversal c s e
+unsafeGTraversal :: GScript -> GTraversal c s e
 unsafeGTraversal = GTraversal
 
 allVertices :: GTraversal General Void Vertex
-allVertices = unsafeFromGremlin "g.V()"
+allVertices = unsafeFromGScript $ gRaw "g.V()"
 
-vertexByID :: Gremlin
+vertexByID :: GScript
               -- ^ Gremlin code for vertex ID.
            -> GTraversal General Void Vertex
-vertexByID vid = unsafeFromGremlin ("g.V(" <> vid <> ")")
+vertexByID vid = unsafeFromGScript (gRaw "g" <> gMethodCall "V" [vid])
 
 infixl 5 @.
 
 (@.) :: GTraversal c a b -> GStep c b d -> GTraversal c a d
-gt @. gs = unsafeFromGremlin (toGremlin gt <> toGremlin gs)
+gt @. gs = unsafeFromGScript (toGScript gt <> toGScript gs)
 
 
 -- | Vertex in a TinkerPop graph.
@@ -167,7 +167,7 @@ data Edge
 
 -- | Element interface in a TinkerPop graph.
 class Element e where
-  getPropertyValue :: Gremlin -> e -> PropertyValue
+  getPropertyValue :: GScript -> e -> PropertyValue
   getPropertyValue = error "This is a phantom method to suppress redundant-constaint warning. Do not evaluate this!"
   getElementID :: e -> ElementID
   getElementID = error "This is a phantom method to suppress redundant-constaint warning. Do not evaluate this!"
@@ -183,119 +183,114 @@ data PropertyValue
 -- | ID object type for Elements
 data ElementID
 
-unsafeGStep :: Gremlin -> GStep c s e
+unsafeGStep :: GScript -> GStep c s e
 unsafeGStep = GStep
 
 -- | @.identity@ step.
 identity :: GStep Filter s s
-identity = unsafeFromGremlin ".identity()"
+identity = unsafeFromGScript $ gMethodCall "identity" []
 
 -- | @.filter@ step with lambda block.
-filterL :: Gremlin
+filterL :: GScript
           -- ^ Gremlin code inside filter's @{}@ block.
         -> GStep Filter s s
-filterL block = unsafeFromGremlin (".filter({" <> block <> "})")
+filterL block = unsafeFromGScript (gMethodCall "filter" [gRaw "{" <> block <> gRaw "}"])
 
 -- | @.filter@ step with steps(traversal).
 filter :: ToGTraversal g => g c s e -> GStep Filter s s
-filter step = unsafeFromGremlin (".filter(" <> (toGremlin $ toGTraversal step) <> ")")
+filter step = unsafeFromGScript (gMethodCall "filter" [toGScript $ toGTraversal step])
 
-unsafeFilterStep :: (s -> a) -> Gremlin -> GStep Filter s s
+unsafeFilterStep :: (s -> a) -> GScript -> GStep Filter s s
 unsafeFilterStep _ = unsafeGStep
 
 -- | @.has@ step.
 has :: Element s
-    => Gremlin -- ^ target
-    -> Gremlin -- ^ expectation
+    => GScript -- ^ target
+    -> GScript -- ^ expectation
     -> GStep Filter s s
-has target expec = unsafeFilterStep (getPropertyValue target) (".has(" <> target <> ", " <> expec <> ")")
+has target expec = unsafeFilterStep (getPropertyValue target)
+                   (gMethodCall "has" [target, expec])
 
-genericMultiArgFilter :: Gremlin -- ^ method name
+genericMultiArgFilter :: Text -- ^ method name
                       -> (s -> a) -- ^ phantom filtering accessor
-                      -> [Gremlin] -- ^ arguments
+                      -> [GScript] -- ^ arguments
                       -> GStep Filter s s
-genericMultiArgFilter method_name f args = unsafeFilterStep f ("." <> method_name <> "(" <> args_g <> ")")
-  where
-    args_g = T.intercalate ", " args
+genericMultiArgFilter method_name f args =
+  unsafeFilterStep f $ gMethodCall method_name args
 
 -- | @.hasLabel@ step
 hasLabel :: Element s
-         => [Gremlin] -- ^ expected label names
+         => [GScript] -- ^ expected label names
          -> GStep Filter s s
 hasLabel = genericMultiArgFilter "hasLabel" getLabel
 
 hasId :: Element s
-      => [Gremlin] -- ^ expected IDs
+      => [GScript] -- ^ expected IDs
       -> GStep Filter s s
 hasId = genericMultiArgFilter "hasId" getElementID
 
 -- | @.or@ step.
 or :: ToGTraversal g => [g c s e] -> GStep Filter s s
-or conds = unsafeFromGremlin (".or(" <> conds_g <> ")")
+or conds = unsafeFromGScript (gMethodCall "or" $ map toG conds)
   where
-    conds_g = T.intercalate ", " $ map toG conds
-    toG cond = toGremlin $ toGTraversal cond
+    toG cond = toGScript $ toGTraversal cond
 
 -- | @.not@ step.
 not :: ToGTraversal g => g c s e -> GStep Filter s s
-not cond = unsafeFromGremlin (".not(" <> (toGremlin $ toGTraversal cond) <> ")")
+not cond = unsafeFromGScript (gMethodCall "not" [toGScript $ toGTraversal cond])
 
 -- | @.range@ step.
-range :: Gremlin
+range :: GScript
       -- ^ min
-      -> Gremlin
+      -> GScript
       -- ^ max
       -> GStep Filter s s
-range min_g max_g = unsafeFromGremlin (".range(" <> min_g <> ", " <> max_g <> ")")
+range min_g max_g = unsafeFromGScript (gMethodCall "range" [min_g, max_g])
 
 -- | @.order@ and @.by@ steps
 orderBy :: ToGTraversal g
-        => [(g c s e, Gremlin)]
+        => [(g c s e, GScript)]
            -- ^ (accessor steps, comparator) of each @.by@
         -> GStep Filter s s
-orderBy bys = unsafeFromGremlin (".order()" <> bys_g)
+orderBy bys = unsafeFromGScript (gMethodCall "order" [] <> bys_g)
   where
     bys_g = mconcat $ map toG bys
     toG (accessor, comparator) =
-      ".by(" <> (toGremlin $ toGTraversal accessor) <> ", " <> comparator <> ")"
+      gMethodCall "by" [(toGScript $ toGTraversal accessor), comparator]
 
 -- | @.flatMap@ step
 flatMap :: ToGTraversal g => g c s e -> GStep c s e
-flatMap gt = unsafeFromGremlin (".flatMap(" <> (toGremlin $ toGTraversal gt) <> ")")
+flatMap gt = unsafeFromGScript (gMethodCall "flatMap" [toGScript $ toGTraversal gt])
 
-unsafeTransformStep :: (a -> b) -> Gremlin -> GStep General a b
+unsafeTransformStep :: (a -> b) -> GScript -> GStep General a b
 unsafeTransformStep _ = unsafeGStep
 
 -- | @.values@ step.
 values :: Element s
-       => [Gremlin]
+       => [GScript]
        -- ^ property keys
        -> GStep General s PropertyValue
-values keys = unsafeTransformStep (getPropertyValue "DUMMY") (".values(" <> keys_g <> ")")
-  where
-    keys_g = T.intercalate ", " keys
+values keys = unsafeTransformStep (getPropertyValue "DUMMY") (gMethodCall "values" keys)
 
-genericTraversalStep :: Gremlin -> [Gremlin] -> GStep General Vertex e
+genericTraversalStep :: Text -> [GScript] -> GStep General Vertex e
 genericTraversalStep method_name edge_labels =
-  unsafeFromGremlin ("." <> method_name <> "(" <> labels_g <> ")")
-  where
-    labels_g = T.intercalate ", " edge_labels
+  unsafeFromGScript (gMethodCall method_name edge_labels)
 
 -- | @.out@ step
-out :: [Gremlin] -- ^ edge labels
+out :: [GScript] -- ^ edge labels
     -> GStep General Vertex Vertex
 out = genericTraversalStep "out"
 
 -- | @.outE@ step
-outE :: [Gremlin] -- ^ edge labels
+outE :: [GScript] -- ^ edge labels
      -> GStep General Vertex Edge
 outE = genericTraversalStep "outE"
 
 -- | @.in@ step (@in@ is reserved by Haskell..)
-inS :: [Gremlin] -- ^ edge labels
+inS :: [GScript] -- ^ edge labels
     -> GStep General Vertex Vertex
 inS = genericTraversalStep "in"
 
-inE :: [Gremlin] -- ^ edge labels
+inE :: [GScript] -- ^ edge labels
     -> GStep General Vertex Edge
 inE = genericTraversalStep "inE"

@@ -17,9 +17,10 @@ import Control.Monad (void)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 
-import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder, Gremlin)
+import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder, GScript)
+import W5J.DB.TinkerPop.GScript (gRaw, gFunCall, gLiteral)
 import W5J.DB.TinkerPop.GStep
-  ( (@.), toGremlin, toGTraversal, forgetFilter,
+  ( (@.), toGScript, toGTraversal, forgetFilter,
     allVertices, hasLabel, has, hasId, orderBy,
     unsafeGTraversal, values
   )
@@ -61,39 +62,39 @@ data QCond = QCondTerm Text
              -- ^ compare 'whatWhen' with the given constant 'When'.
            deriving (Show,Eq,Ord)
 
-buildQuery :: QueryWhat -> GBuilder Gremlin
+buildQuery :: QueryWhat -> GBuilder GScript
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   start <- makeStart
-  return $ toGremlin (start @. forgetFilter traversal)
+  return $ toGScript (start @. forgetFilter traversal)
   where
-    makeStart = return (allVertices @. (forgetFilter $ hasLabel ["'what'"]))
+    makeStart = return (allVertices @. (forgetFilter $ hasLabel ["what"]))
     buildCond (QCondTerm t) = do
       vt <- newPlaceHolder t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
       return $ GStep.or $
-        [ has "'title'" ("textContains(" <> vt <> ")"),
-          has "'body'"  ("textContains(" <> vt <> ")"),
-          has "'tags'"  ("eq(" <> vt <> ")")
+        [ has "title" (gFunCall "textContains" [vt]),
+          has "body"  (gFunCall "textContains" [vt]),
+          has "tags"  (gFunCall "eq" [vt])
         ]
     buildCond (QCondTag t) = do
       vt <- newPlaceHolder t
-      return $ has "'tags'" ("eq(" <> vt <> ")")
-    buildCond (QCondWhereID where_id) = do
+      return $ has "tags" (gFunCall "eq" [vt])
+    buildCond (QCondWhereID where_id) = do -- TODO: こいつのテストから。
       vid <- newPlaceHolder where_id
       return $ GStep.filter $ filterTraversal vid
         where
-          filterTraversal vid = GStep.out ["'where'"] >>> (forgetFilter $ hasId [vid])
+          filterTraversal vid = GStep.out ["where"] >>> (forgetFilter $ hasId [vid])
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
       return $ orderBy [byWhen "when_from", byWhen "when_to", commonBy]
       where
         byWhen edge_label =
-          (unsafeGTraversal ("optionalT(out('" <> edge_label <> "'))"), comparator)
+          (unsafeGTraversal (gFunCall "optionalT" [gFunCall "out" [gLiteral edge_label]]), comparator)
         comparator = case order of
-          QOrderAsc -> "compareOptWhenVertices"
-          QOrderDesc -> "compareOptWhenVertices.reversed()"
+          QOrderAsc -> gRaw "compareOptWhenVertices"
+          QOrderDesc -> gRaw "compareOptWhenVertices.reversed()"
         commonBy =
-          (toGTraversal $ void $ values ["'updated_at'"], orderComparator order)
+          (toGTraversal $ void $ values ["updated_at"], orderComparator order)
       

@@ -25,7 +25,8 @@ import Data.Monoid ((<>))
 import Control.Category ((>>>))
 
 import W5J.Interval (Interval, sup, inf, (...))
-import W5J.DB.TinkerPop.GBuilder (GBuilder, Gremlin, newPlaceHolder)
+import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder)
+import W5J.DB.TinkerPop.GScript (GScript, gRaw)
 import W5J.DB.TinkerPop.GStep (GStep, Filter)
 import qualified W5J.DB.TinkerPop.GStep as GStep
 
@@ -61,9 +62,9 @@ data QOrder = QOrderAsc | QOrderDesc
             deriving (Show,Eq,Ord,Enum,Bounded)
 
 -- | Predefined Gremlin comparator for QOrder
-orderComparator :: QOrder -> Gremlin
-orderComparator QOrderAsc = "incr"
-orderComparator QOrderDesc = "decr"
+orderComparator :: QOrder -> GScript
+orderComparator QOrderAsc = gRaw "incr"
+orderComparator QOrderDesc = gRaw "decr"
 
 
 -- | Generic query object. type @c@ is target-specific query condition

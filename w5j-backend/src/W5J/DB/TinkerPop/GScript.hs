@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
 -- |
 -- Module: W5J.DB.TinkerPop.GScript
 -- Description: Low-level Gremlin script data type
@@ -11,6 +11,8 @@ module W5J.DB.TinkerPop.GScript
          -- * Constructors
          gRaw,
          gLiteral,
+         gFunCall,
+         gMethodCall,
          -- * Conversions
          getGScript,
          -- * Placeholders
@@ -19,8 +21,9 @@ module W5J.DB.TinkerPop.GScript
          toPlaceHolderVariable
        ) where
 
-import Data.Monoid (Monoid(..))
+import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
+import Data.List (intersperse)
 import Data.Text (Text, pack, unpack)
 import qualified Data.Text.Lazy as TL
 
@@ -66,3 +69,21 @@ toPlaceHolderVariable i =  pack ("__v" ++ show i)
 -- | Create a readable Gremlin script from 'GScript'.
 getGScript :: GScript -> Text
 getGScript = TL.toStrict . unGScript
+
+-- | Create a 'GScript' that calls the given function with the given
+-- arguments.
+gFunCall :: Text -- ^ function name
+         -> [GScript] -- ^ arguments
+         -> GScript
+gFunCall fun_name args = gRaw fun_name <> gRaw "(" <> args_g <> gRaw ")"
+  where
+    args_g = mconcat $ intersperse (gRaw ", ") args
+
+-- | Create a 'GScript' that calls the given (object or class) method
+-- call with the given arguments.
+gMethodCall :: Text -- ^ method name
+            -> [GScript] -- ^ arguments
+            -> GScript
+gMethodCall method_name args = gRaw "." <> gFunCall method_name args
+
+
