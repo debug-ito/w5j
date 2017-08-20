@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
 -- |
 -- Module: W5J.DB.TinkerPop.GBuilder
 -- Description: GBuilder monad for building Gremlin
@@ -31,10 +31,11 @@ type PlaceHolderIndex = Int
 
 type PlaceHolderVariable = Text
 
-type GBuilder = State (PlaceHolderIndex, [Value])
+newtype GBuilder a = GBuilder { unGBuilder :: State (PlaceHolderIndex, [Value]) a }
+                   deriving (Functor, Applicative, Monad)
 
 newPlaceHolder :: ToJSON v => v -> GBuilder PlaceHolderVariable
-newPlaceHolder val = do
+newPlaceHolder val = GBuilder $ do
   (next_index, values) <- State.get
   State.put (succ next_index, values ++ [toJSON val])
   return $ place next_index
@@ -45,7 +46,7 @@ place index = "__v" <> (pack $ show index)
 runGBuilder :: GBuilder a -> (a, Binding)
 runGBuilder gbuilder = (ret, binding)
   where
-    (ret, (_, values)) = State.runState gbuilder (0, [])
+    (ret, (_, values)) = State.runState (unGBuilder gbuilder) (0, [])
     binding = HM.fromList $ zip (map place [0 ..]) $ values
 
 submitGBuilder :: Connection -> GBuilder Gremlin -> IO (Either String [Value])

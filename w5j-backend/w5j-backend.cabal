@@ -18,7 +18,7 @@ library
   hs-source-dirs:       src
   ghc-options:          -Wall -fno-warn-unused-imports
   -- default-extensions:   
-  other-extensions:     OverloadedStrings, DeriveGeneric
+  other-extensions:     OverloadedStrings, DeriveGeneric, GeneralizedNewtypeDeriving
   exposed-modules:      W5J.What,
                         W5J.When,
                         W5J.Where,
