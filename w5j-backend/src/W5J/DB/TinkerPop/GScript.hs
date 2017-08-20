@@ -36,9 +36,9 @@ instance IsString GScript where
   fromString = GScript . TL.pack . escapeDQuotes
 
 escapeDQuotes :: String -> String
-escapeDQuotes orig = f =<< orig
+escapeDQuotes orig = ('"' : (esc =<< orig)) ++ "\""
   where
-    f c = case c of
+    esc c = case c of
       '\n' -> "\\n"
       '\r' -> "\\r"
       '\t' -> "\\t"
