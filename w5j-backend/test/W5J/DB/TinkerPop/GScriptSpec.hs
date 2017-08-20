@@ -9,7 +9,8 @@ import Test.QuickCheck (property, Arbitrary(..))
 
 import W5J.DB.TinkerPop.GScript
   ( gRaw, getGScript, gLiteral,
-    gPlaceHolder, toPlaceHolderVariable
+    gPlaceHolder, toPlaceHolderVariable,
+    gFunCall, gMethodCall
   )
 
 -- TODO: move this into a single support module.
@@ -29,6 +30,12 @@ spec = do
     specify "empty" $ checkLiteral "" "\"\""
     specify "words" $ checkLiteral "hoge foo bar"  "\"hoge foo bar\""
     specify "escaped" $ checkLiteral "foo 'aaa \n \t \\ \"bar\"" "\"foo 'aaa \\n \\t \\\\ \\\"bar\\\"\""
+  describe "gFunCall" $ do
+    it "should make function call" $ do
+      (getGScript $ gFunCall "fun" ["foo", gRaw "bar"]) `shouldBe` "fun(\"foo\", bar)"
+  describe "gMethodCall" $ do
+    it "should make method call" $ do
+      (getGScript $ gMethodCall "meth" [gRaw "hoge", gRaw "foo", "bar"]) `shouldBe` ".meth(hoge, foo, \"bar\")"
 
 
 checkLiteral :: String -> Text -> Expectation
