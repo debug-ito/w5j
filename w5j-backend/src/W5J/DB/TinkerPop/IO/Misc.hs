@@ -13,7 +13,8 @@ import Control.Monad (void)
 import W5J.DB.TinkerPop.IO.Connection (Connection)
 import W5J.DB.TinkerPop.Error (toGremlinError)
 import W5J.DB.TinkerPop.GBuilder (submitGBuilder)
+import W5J.DB.TinkerPop.GScript (gRaw)
 
 -- | Clear all vertices and edges.
 clearAll :: Connection -> IO ()
-clearAll conn = void $ toGremlinError =<< (submitGBuilder conn $ return "g.V().drop()")
+clearAll conn = void $ toGremlinError =<< (submitGBuilder conn $ return $ gRaw "g.V().drop()")
