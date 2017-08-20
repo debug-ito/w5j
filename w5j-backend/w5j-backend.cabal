@@ -33,7 +33,8 @@ library
   other-modules:        W5J.DB.TinkerPop.Error,
                         W5J.DB.TinkerPop.Parse,
                         W5J.DB.TinkerPop.GBuilder,
-                        W5J.DB.TinkerPop.GStep
+                        W5J.DB.TinkerPop.GStep,
+                        W5J.DB.TinkerPop.GScript
   build-depends:        base,
                         text,
                         time,
