@@ -16,13 +16,15 @@ import Control.Category ((>>>))
 import Control.Monad (void)
 import Data.Monoid ((<>))
 import Data.Text (Text)
+import Data.Void (Void)
 
 import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder, GScript)
 import W5J.DB.TinkerPop.GScript (gRaw, gFunCall, gLiteral)
 import W5J.DB.TinkerPop.GStep
   ( (@.), toGScript, toGTraversal, forgetFilter,
     allVertices, hasLabel, has, hasId, orderBy,
-    unsafeGTraversal, values
+    unsafeGTraversal, values,
+    GTraversal, Vertex, General
   )
 import qualified W5J.DB.TinkerPop.GStep as GStep
 import W5J.DB.TinkerPop.Query.Common
@@ -62,11 +64,11 @@ data QCond = QCondTerm Text
              -- ^ compare 'whatWhen' with the given constant 'When'.
            deriving (Show,Eq,Ord)
 
-buildQuery :: QueryWhat -> GBuilder GScript
+buildQuery :: QueryWhat -> GBuilder (GTraversal General Void Vertex)
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   start <- makeStart
-  return $ toGScript (start @. forgetFilter traversal)
+  return $ (start @. forgetFilter traversal)
   where
     makeStart = return (allVertices @. (forgetFilter $ hasLabel ["what"]))
     buildCond (QCondTerm t) = do

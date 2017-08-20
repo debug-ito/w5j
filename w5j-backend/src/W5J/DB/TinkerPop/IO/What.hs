@@ -20,6 +20,12 @@ import Data.Monoid ((<>))
 import W5J.Aeson (toAWhat)
 import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
 import W5J.DB.TinkerPop.GBuilder (newPlaceHolder, submitGBuilder)
+import W5J.DB.TinkerPop.GScript (gFunCall, gMethodCall, gRaw)
+import W5J.DB.TinkerPop.GStep
+  ( vertexByID, (@.), hasLabel, unsafeGStep, GStep, toGScript,
+    forgetFilter
+  )
+import qualified W5J.DB.TinkerPop.GStep as GStep
 import W5J.DB.TinkerPop.IO.Connection (Connection)
 import W5J.DB.TinkerPop.Parse (ioFromJSON, unACompleteWhat)
 import qualified W5J.DB.TinkerPop.Query.What as QueryWhat
@@ -54,7 +60,7 @@ addWhat conn what = do
                            }
     getGBuilder w = do
       p <- newPlaceHolder $ toAWhat w
-      return ("addWhat(" <> p <> ").id()")
+      return  (gFunCall "addWhat" [p] <> gMethodCall "id" [])
     parseResult [] = parseError "No element in the result."
     parseResult (ret : _) = ioFromJSON ret
     
@@ -67,6 +73,11 @@ updateWhat :: Connection
 updateWhat = undefined
 -- TODO. We can just delete and re-create When vertices.
 
+completeWhatStep :: GStep GStep.General GStep.Vertex ()
+completeWhatStep = unsafeGStep $ gMethodCall "map" [block]
+  where
+    block = gRaw "{ getCompleteWhat(it.get()) }"
+
 -- | Get 'What' vertex with the given 'WhatID'.
 getWhatById :: Connection -> WhatID -> IO (Maybe What)
 getWhatById conn wid = do
@@ -77,7 +88,7 @@ getWhatById conn wid = do
   where
     gbuilder = do
       v_wid <- newPlaceHolder wid
-      return ("g.V(" <> v_wid <> ").hasLabel('what').map({ getCompleteWhat(it.get()) })")
+      return $ toGScript (vertexByID v_wid @. (forgetFilter $ hasLabel ["what"]) @. completeWhatStep)
 
 queryWhat :: Connection -> QueryWhat.QueryWhat -> IO [What]
 queryWhat conn query =
@@ -85,7 +96,7 @@ queryWhat conn query =
   where
     gbuilder = do
       query_gremlin <- QueryWhat.buildQuery query
-      return (query_gremlin <> ".map({ getCompleteWhat(it.get()) })")
+      return $ toGScript (query_gremlin @. completeWhatStep)
 
 -- | Delete a 'What' vertex.
 deleteWhat :: Connection -> WhatID -> IO ()
