@@ -10,7 +10,7 @@ module W5J.DB.TinkerPop.GBuilder
          GBuilder,
          GScript,
          -- * Actions
-         newPlaceHolder,
+         newBind,
          -- * Runners
          runGBuilder,
          submitGBuilder
@@ -29,12 +29,15 @@ import W5J.DB.TinkerPop.GScript
   )
 import W5J.DB.TinkerPop.IO.Connection (Binding, Connection, submit)
 
-
+-- | A Monad that stores bound variables and values.
 newtype GBuilder a = GBuilder { unGBuilder :: State (PlaceHolderIndex, [Value]) a }
                    deriving (Functor, Applicative, Monad)
 
-newPlaceHolder :: ToJSON v => v -> GBuilder GScript
-newPlaceHolder val = GBuilder $ do
+-- | Create a new Gremlin variable bound to the given value.
+newBind :: ToJSON v
+        => v -- ^ bound value
+        -> GBuilder GScript -- ^ variable
+newBind val = GBuilder $ do
   (next_index, values) <- State.get
   State.put (succ next_index, values ++ [toJSON val])
   return $ gPlaceHolder next_index

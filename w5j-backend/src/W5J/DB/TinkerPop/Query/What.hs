@@ -18,7 +18,7 @@ import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Void (Void)
 
-import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder, GScript)
+import W5J.DB.TinkerPop.GBuilder (GBuilder, newBind, GScript)
 import W5J.DB.TinkerPop.GScript (gRaw, gFunCall, gLiteral)
 import W5J.DB.TinkerPop.GStep
   ( (@.), toGScript, toGTraversal, forgetFilter,
@@ -72,7 +72,7 @@ buildQuery query = do
   where
     makeStart = return (allVertices @. (forgetFilter $ hasLabel ["what"]))
     buildCond (QCondTerm t) = do
-      vt <- newPlaceHolder t
+      vt <- newBind t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
       return $ GStep.or $
         [ has "title" (gFunCall "textContains" [vt]),
@@ -80,10 +80,10 @@ buildQuery query = do
           has "tags"  (gFunCall "eq" [vt])
         ]
     buildCond (QCondTag t) = do
-      vt <- newPlaceHolder t
+      vt <- newBind t
       return $ has "tags" (gFunCall "eq" [vt])
     buildCond (QCondWhereID where_id) = do -- TODO: こいつのテストから。
-      vid <- newPlaceHolder where_id
+      vid <- newBind where_id
       return $ GStep.filter $ filterTraversal vid
         where
           filterTraversal vid = GStep.out ["where"] >>> (forgetFilter $ hasId [vid])

@@ -19,7 +19,7 @@ import Data.Monoid ((<>))
 
 import W5J.Aeson (toAWhat)
 import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
-import W5J.DB.TinkerPop.GBuilder (newPlaceHolder, submitGBuilder)
+import W5J.DB.TinkerPop.GBuilder (newBind, submitGBuilder)
 import W5J.DB.TinkerPop.GScript (gFunCall, gMethodCall, gRaw)
 import W5J.DB.TinkerPop.GStep
   ( vertexByID, (@.), hasLabel, unsafeGStep, GStep, toGScript,
@@ -59,7 +59,7 @@ addWhat conn what = do
                              whatUpdatedAt = t
                            }
     getGBuilder w = do
-      p <- newPlaceHolder $ toAWhat w
+      p <- newBind $ toAWhat w
       return  (gFunCall "addWhat" [p] <> gMethodCall "id" [])
     parseResult [] = parseError "No element in the result."
     parseResult (ret : _) = ioFromJSON ret
@@ -87,7 +87,7 @@ getWhatById conn wid = do
    Just got_val -> fmap (Just . unACompleteWhat) $ ioFromJSON got_val
   where
     gbuilder = do
-      v_wid <- newPlaceHolder wid
+      v_wid <- newBind wid
       return $ toGScript (vertexByID v_wid @. (forgetFilter $ hasLabel ["what"]) @. completeWhatStep)
 
 queryWhat :: Connection -> QueryWhat.QueryWhat -> IO [What]

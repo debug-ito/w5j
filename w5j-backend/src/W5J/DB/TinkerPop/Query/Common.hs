@@ -25,7 +25,7 @@ import Data.Monoid ((<>))
 import Control.Category ((>>>))
 
 import W5J.Interval (Interval, sup, inf, (...))
-import W5J.DB.TinkerPop.GBuilder (GBuilder, newPlaceHolder)
+import W5J.DB.TinkerPop.GBuilder (GBuilder, newBind)
 import W5J.DB.TinkerPop.GScript (GScript, gRaw)
 import W5J.DB.TinkerPop.GStep (GStep, Filter)
 import qualified W5J.DB.TinkerPop.GStep as GStep
@@ -94,8 +94,8 @@ buildQueryWith buildCond buildOBy query = do
   return (gremlin_cond >>> gremlin_orderby >>> gremlin_range)
   where
     buildRange range = do
-      v_min <- newPlaceHolder $ qRangeMin range
-      v_max <- newPlaceHolder $ qRangeMax range
+      v_min <- newBind $ qRangeMin range
+      v_max <- newBind $ qRangeMax range
       return $ GStep.range v_min v_max
     buildCondTree (QCondOr a b) = do
       ga <- buildCondTree a
