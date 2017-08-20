@@ -27,8 +27,7 @@ import Control.Category ((>>>))
 import W5J.Interval (Interval, sup, inf, (...))
 import W5J.DB.TinkerPop.GBuilder (GBuilder, newBind)
 import W5J.DB.TinkerPop.GScript (GScript, gRaw)
-import W5J.DB.TinkerPop.GStep (GStep, Filter)
-import qualified W5J.DB.TinkerPop.GStep as GStep
+import W5J.DB.TinkerPop.GStep (GStep, Filter, gRange, gOr, gNot, gIdentity)
 
 -- | Range of elements indices to query. Min is inclusive, max is
 -- exclusive. Starting from 0.
@@ -96,17 +95,17 @@ buildQueryWith buildCond buildOBy query = do
     buildRange range = do
       v_min <- newBind $ qRangeMin range
       v_max <- newBind $ qRangeMax range
-      return $ GStep.range v_min v_max
+      return $ gRange v_min v_max
     buildCondTree (QCondOr a b) = do
       ga <- buildCondTree a
       gb <- buildCondTree b
-      return $ GStep.or [ga, gb]
+      return $ gOr [ga, gb]
     buildCondTree (QCondAnd a b) = do
       ga <- buildCondTree a
       gb <- buildCondTree b
       return (ga >>> gb)
     buildCondTree (QCondNot a) = do
       ga <- buildCondTree a
-      return $ GStep.not ga
+      return $ gNot ga
     buildCondTree (QCondLeaf c) = buildCond c
-    buildCondTree (QCondTrue) = return $ GStep.identity
+    buildCondTree (QCondTrue) = return $ gIdentity

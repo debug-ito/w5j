@@ -22,11 +22,10 @@ import W5J.DB.TinkerPop.GBuilder (GBuilder, newBind, GScript)
 import W5J.DB.TinkerPop.GScript (gRaw, gFunCall, gLiteral)
 import W5J.DB.TinkerPop.GStep
   ( (@.), toGScript, toGTraversal, forgetFilter,
-    allVertices, hasLabel, has, hasId, orderBy,
-    unsafeGTraversal, values,
+    allVertices, gHasLabel, gHas, gHasId, gOrderBy,
+    unsafeGTraversal, gValues, gFilter, gOut, gOr,
     GTraversal, Vertex, General
   )
-import qualified W5J.DB.TinkerPop.GStep as GStep
 import W5J.DB.TinkerPop.Query.Common
   ( Query, QOrder(..),
     buildQueryWith, orderComparator
@@ -70,27 +69,27 @@ buildQuery query = do
   start <- makeStart
   return $ (start @. forgetFilter traversal)
   where
-    makeStart = return (allVertices @. (forgetFilter $ hasLabel ["what"]))
+    makeStart = return (allVertices @. (forgetFilter $ gHasLabel ["what"]))
     buildCond (QCondTerm t) = do
       vt <- newBind t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
-      return $ GStep.or $
-        [ has "title" (gFunCall "textContains" [vt]),
-          has "body"  (gFunCall "textContains" [vt]),
-          has "tags"  (gFunCall "eq" [vt])
+      return $ gOr $
+        [ gHas "title" (gFunCall "textContains" [vt]),
+          gHas "body"  (gFunCall "textContains" [vt]),
+          gHas "tags"  (gFunCall "eq" [vt])
         ]
     buildCond (QCondTag t) = do
       vt <- newBind t
-      return $ has "tags" (gFunCall "eq" [vt])
+      return $ gHas "tags" (gFunCall "eq" [vt])
     buildCond (QCondWhereID where_id) = do -- TODO: こいつのテストから。
       vid <- newBind where_id
-      return $ GStep.filter $ filterTraversal vid
+      return $ gFilter $ filterTraversal vid
         where
-          filterTraversal vid = GStep.out ["where"] >>> (forgetFilter $ hasId [vid])
+          filterTraversal vid = gOut ["where"] >>> (forgetFilter $ gHasId [vid])
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
-      return $ orderBy [byWhen "when_from", byWhen "when_to", commonBy]
+      return $ gOrderBy [byWhen "when_from", byWhen "when_to", commonBy]
       where
         byWhen edge_label =
           (unsafeGTraversal (gFunCall "optionalT" [gFunCall "out" [gLiteral edge_label]]), comparator)
@@ -98,5 +97,5 @@ buildQuery query = do
           QOrderAsc -> gRaw "compareOptWhenVertices"
           QOrderDesc -> gRaw "compareOptWhenVertices.reversed()"
         commonBy =
-          (toGTraversal $ void $ values ["updated_at"], orderComparator order)
+          (toGTraversal $ void $ gValues ["updated_at"], orderComparator order)
       

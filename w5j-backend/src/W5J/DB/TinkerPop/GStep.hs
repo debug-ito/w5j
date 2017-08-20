@@ -29,25 +29,25 @@ module W5J.DB.TinkerPop.GStep
          -- * GStep
          unsafeGStep,
          -- ** Filter step
-         identity,
-         filterL,
-         filter,
-         has,
-         hasLabel,
-         hasId,
-         or,
-         not,
-         range,
+         gIdentity,
+         gFilterL,
+         gFilter,
+         gHas,
+         gHasLabel,
+         gHasId,
+         gOr,
+         gNot,
+         gRange,
          -- ** Sorting step
-         orderBy,
+         gOrderBy,
          -- ** Transformation step
-         flatMap,
-         values,
+         gFlatMap,
+         gValues,
          -- ** Graph traversal step
-         out,
-         outE,
-         inS,
-         inE
+         gOut,
+         gOutE,
+         gIn,
+         gInE
        ) where
 
 import Prelude hiding (or, filter, not)
@@ -59,6 +59,27 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Void (Void)
 import W5J.DB.TinkerPop.GScript (GScript, gRaw, gMethodCall)
+
+-- TODO: forgetFilter呼ぶのダルいな。。identityなどはarbitrary型でいいか？
+
+-- TODO: ダミーのクラスメソッドって、本当に必要？
+
+-- TODO: もうちょい分類すると、markerはFilter, Transform, SideEffectが
+-- あるだろう。厄介なのは、and stepなんかはchild traversalがTransform
+-- なら結果(parent traversal)はFilterになれるということ。これをどう表
+-- 現するか？
+--
+-- type classを使って全パターンinstance化するのでもいい？なんか警告で
+-- ない？
+--
+-- SideEffectのkindは(* -> *)か？つまり(SideEffect Filter),
+-- (SideEffect Transform)が考えられそうではある。
+--
+-- いっそのこと、SideEffectはGTraversalやGStepを包むモナドにするか？そ
+-- うすると、child traversalがSideEffectならparentのSideEffectにならざ
+-- るを得ない。しかし、依然としてFilterやTransformの型マーカーは必要に
+-- なり、ずいぶん型体系がブサイクになる。。
+
 
 
 -- | A Gremlin Step (method call) that takes data @s@ from upstream
@@ -75,7 +96,7 @@ newtype GStep c s e = GStep { unGStep :: GScript }
 
 -- | 'id' is 'identity'.
 instance Category (GStep c) where
-  id = forgetFilter identity
+  id = forgetFilter gIdentity
   bc . ab = unsafeFromGScript (unGStep ab <> unGStep bc)
 
 -- | Unsafely convert output type
@@ -103,8 +124,8 @@ newtype GTraversal c s e = GTraversal { unGTraversal :: GScript }
 -- | 'id' is @__.identity()@. '(.)' compose 'GTraversal's by
 -- @.flatMap@ step.
 instance Category (GTraversal c) where
-  id = toGTraversal $ forgetFilter identity
-  a . b = b @. flatMap a
+  id = toGTraversal $ forgetFilter gIdentity
+  a . b = b @. gFlatMap a
 
 -- | Unsafely convert output type.
 instance Functor (GTraversal c s) where
@@ -187,29 +208,29 @@ unsafeGStep :: GScript -> GStep c s e
 unsafeGStep = GStep
 
 -- | @.identity@ step.
-identity :: GStep Filter s s
-identity = unsafeFromGScript $ gMethodCall "identity" []
+gIdentity :: GStep Filter s s
+gIdentity = unsafeFromGScript $ gMethodCall "identity" []
 
 -- | @.filter@ step with lambda block.
-filterL :: GScript
-          -- ^ Gremlin code inside filter's @{}@ block.
-        -> GStep Filter s s
-filterL block = unsafeFromGScript (gMethodCall "filter" [gRaw "{" <> block <> gRaw "}"])
+gFilterL :: GScript
+         -- ^ Gremlin code inside filter's @{}@ block.
+         -> GStep Filter s s
+gFilterL block = unsafeFromGScript (gMethodCall "filter" [gRaw "{" <> block <> gRaw "}"])
 
 -- | @.filter@ step with steps(traversal).
-filter :: ToGTraversal g => g c s e -> GStep Filter s s
-filter step = unsafeFromGScript (gMethodCall "filter" [toGScript $ toGTraversal step])
+gFilter :: ToGTraversal g => g c s e -> GStep Filter s s
+gFilter step = unsafeFromGScript (gMethodCall "filter" [toGScript $ toGTraversal step])
 
 unsafeFilterStep :: (s -> a) -> GScript -> GStep Filter s s
 unsafeFilterStep _ = unsafeGStep
 
 -- | @.has@ step.
-has :: Element s
-    => GScript -- ^ target
-    -> GScript -- ^ expectation
-    -> GStep Filter s s
-has target expec = unsafeFilterStep (getPropertyValue target)
-                   (gMethodCall "has" [target, expec])
+gHas :: Element s
+     => GScript -- ^ target
+     -> GScript -- ^ expectation
+     -> GStep Filter s s
+gHas target expec = unsafeFilterStep (getPropertyValue target)
+                    (gMethodCall "has" [target, expec])
 
 genericMultiArgFilter :: Text -- ^ method name
                       -> (s -> a) -- ^ phantom filtering accessor
@@ -219,81 +240,81 @@ genericMultiArgFilter method_name f args =
   unsafeFilterStep f $ gMethodCall method_name args
 
 -- | @.hasLabel@ step
-hasLabel :: Element s
-         => [GScript] -- ^ expected label names
-         -> GStep Filter s s
-hasLabel = genericMultiArgFilter "hasLabel" getLabel
+gHasLabel :: Element s
+          => [GScript] -- ^ expected label names
+          -> GStep Filter s s
+gHasLabel = genericMultiArgFilter "hasLabel" getLabel
 
-hasId :: Element s
-      => [GScript] -- ^ expected IDs
-      -> GStep Filter s s
-hasId = genericMultiArgFilter "hasId" getElementID
+gHasId :: Element s
+       => [GScript] -- ^ expected IDs
+       -> GStep Filter s s
+gHasId = genericMultiArgFilter "hasId" getElementID
 
 -- | @.or@ step.
-or :: ToGTraversal g => [g c s e] -> GStep Filter s s
-or conds = unsafeFromGScript (gMethodCall "or" $ map toG conds)
+gOr :: ToGTraversal g => [g c s e] -> GStep Filter s s
+gOr conds = unsafeFromGScript (gMethodCall "or" $ map toG conds)
   where
     toG cond = toGScript $ toGTraversal cond
 
 -- | @.not@ step.
-not :: ToGTraversal g => g c s e -> GStep Filter s s
-not cond = unsafeFromGScript (gMethodCall "not" [toGScript $ toGTraversal cond])
+gNot :: ToGTraversal g => g c s e -> GStep Filter s s
+gNot cond = unsafeFromGScript (gMethodCall "not" [toGScript $ toGTraversal cond])
 
 -- | @.range@ step.
-range :: GScript
-      -- ^ min
-      -> GScript
-      -- ^ max
-      -> GStep Filter s s
-range min_g max_g = unsafeFromGScript (gMethodCall "range" [min_g, max_g])
+gRange :: GScript
+       -- ^ min
+       -> GScript
+       -- ^ max
+       -> GStep Filter s s
+gRange min_g max_g = unsafeFromGScript (gMethodCall "range" [min_g, max_g])
 
 -- | @.order@ and @.by@ steps
-orderBy :: ToGTraversal g
-        => [(g c s e, GScript)]
-           -- ^ (accessor steps, comparator) of each @.by@
-        -> GStep Filter s s
-orderBy bys = unsafeFromGScript (gMethodCall "order" [] <> bys_g)
+gOrderBy :: ToGTraversal g
+         => [(g c s e, GScript)]
+         -- ^ (accessor steps, comparator) of each @.by@
+         -> GStep Filter s s
+gOrderBy bys = unsafeFromGScript (gMethodCall "order" [] <> bys_g)
   where
     bys_g = mconcat $ map toG bys
     toG (accessor, comparator) =
       gMethodCall "by" [(toGScript $ toGTraversal accessor), comparator]
 
 -- | @.flatMap@ step
-flatMap :: ToGTraversal g => g c s e -> GStep c s e
-flatMap gt = unsafeFromGScript (gMethodCall "flatMap" [toGScript $ toGTraversal gt])
+gFlatMap :: ToGTraversal g => g c s e -> GStep c s e
+gFlatMap gt = unsafeFromGScript (gMethodCall "flatMap" [toGScript $ toGTraversal gt])
 
 unsafeTransformStep :: (a -> b) -> GScript -> GStep General a b
 unsafeTransformStep _ = unsafeGStep
 
 -- | @.values@ step.
-values :: Element s
-       => [GScript]
-       -- ^ property keys
-       -> GStep General s PropertyValue
-values keys = unsafeTransformStep (getPropertyValue "DUMMY") (gMethodCall "values" keys)
+gValues :: Element s
+        => [GScript]
+        -- ^ property keys
+        -> GStep General s PropertyValue
+gValues keys = unsafeTransformStep (getPropertyValue "DUMMY") (gMethodCall "values" keys)
 
 genericTraversalStep :: Text -> [GScript] -> GStep General Vertex e
 genericTraversalStep method_name edge_labels =
   unsafeFromGScript (gMethodCall method_name edge_labels)
 
 -- | @.out@ step
-out :: [GScript] -- ^ edge labels
-    -> GStep General Vertex Vertex
-out = genericTraversalStep "out"
+gOut :: [GScript] -- ^ edge labels
+     -> GStep General Vertex Vertex
+gOut = genericTraversalStep "out"
 
 -- | @.outE@ step
-outE :: [GScript] -- ^ edge labels
-     -> GStep General Vertex Edge
-outE = genericTraversalStep "outE"
+gOutE :: [GScript] -- ^ edge labels
+      -> GStep General Vertex Edge
+gOutE = genericTraversalStep "outE"
 
 -- | @.in@ step (@in@ is reserved by Haskell..)
-inS :: [GScript] -- ^ edge labels
+gIn :: [GScript] -- ^ edge labels
     -> GStep General Vertex Vertex
-inS = genericTraversalStep "in"
+gIn = genericTraversalStep "in"
 
-inE :: [GScript] -- ^ edge labels
-    -> GStep General Vertex Edge
-inE = genericTraversalStep "inE"
+gInE :: [GScript] -- ^ edge labels
+     -> GStep General Vertex Edge
+gInE = genericTraversalStep "inE"
 
 ---- -- probably we can implement .as() step like this. GBuilder generates
 ---- -- some 'Label', which is passed to .as() step and can be passed later
