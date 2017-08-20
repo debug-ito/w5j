@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- |
 -- Module: W5J.DB.TinkerPop.GScript
 -- Description: Low-level Gremlin script data type
@@ -5,43 +6,34 @@
 --
 -- 
 module W5J.DB.TinkerPop.GScript
-       () where
+       ( -- * Type
+         GScript,
+         -- * Constructors
+         gRaw,
+         gLiteral,
+         -- * Conversions
+         getGScript,
+         -- * Placeholders
+         PlaceHolderIndex,
+         gPlaceHolder,
+         toPlaceHolderVariable
+       ) where
 
 import Data.Monoid (Monoid(..))
 import Data.String (IsString(..))
 import Data.Text (Text, pack, unpack)
-
-
-data GScriptElem = GSRaw !Text
-                 | GSLiteral !Text
-                 | GSPlaceHolder !Int
-                 deriving (Show,Eq,Ord)
+import qualified Data.Text.Lazy as TL
 
 -- | Gremlin script data.
-newtype GScript = GScript { unGScript :: ([GScriptElem] -> [GScriptElem]) }
-
-toGScriptElems :: GScript -> [GScriptElem]
-toGScriptElems gs = unGScript gs []
-
-toTextDList :: GScript -> [Text] -> [Text]
-toTextDList gs input = 
-
-instance Show GScript where
-  show = show . toGScriptElems
-
-instance Eq GScript where
-  a == b  = toGScriptElems a == toGScriptElems b
-
-instance Monoid GScript where
-  mempty = GScript id
-  a `mappend` b = unGScript b . unGScript a
+newtype GScript = GScript { unGScript :: TL.Text }
+                deriving (Show,Eq,Ord,Monoid)
 
 -- | Same as 'gLiteral' except for the input type.
 instance IsString GScript where
-  fromString s = (++ (GSLiteral $ pack $ escapeDQuotes s))
+  fromString = GScript . TL.pack . escapeDQuotes
 
-espaceDQuotes :: String -> String
-espaceDQuotes orig = f =<< orig
+escapeDQuotes :: String -> String
+escapeDQuotes orig = f =<< orig
   where
     f c = case c of
       '\n' -> "\\n"
@@ -54,7 +46,7 @@ espaceDQuotes orig = f =<< orig
 
 -- | Create a raw Gremlin script. It is printed as-is.
 gRaw :: Text -> GScript
-gRaw t = (++ [GSRaw t])
+gRaw = GScript . TL.fromStrict
 
 -- | Create a string literal in Gremlin script. The content is
 -- automatically escaped.
@@ -65,7 +57,7 @@ type PlaceHolderIndex = Int
 
 -- | Create a placeholder variable with the given index.
 gPlaceHolder :: PlaceHolderIndex -> GScript
-gPlaceHolder i = (++ [GPlaceHolder i])
+gPlaceHolder = GScript . TL.fromStrict . toPlaceHolderVariable
 
 -- | Create placeholder variable string from the index.
 toPlaceHolderVariable :: PlaceHolderIndex -> Text
@@ -73,4 +65,4 @@ toPlaceHolderVariable i =  pack ("__v" ++ show i)
 
 -- | Create a readable Gremlin script from 'GScript'.
 getGScript :: GScript -> Text
-getGScript = undefined
+getGScript = TL.toStrict . unGScript
