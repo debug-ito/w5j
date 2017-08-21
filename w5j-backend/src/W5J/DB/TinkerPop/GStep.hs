@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 -- |
 -- Module: W5J.DB.TinkerPop.GStep
 -- Description: Gremlin steps/traversal types.
@@ -187,13 +188,7 @@ data Vertex
 data Edge
 
 -- | Element interface in a TinkerPop graph.
-class Element e where
-  getPropertyValue :: GScript -> e -> PropertyValue
-  getPropertyValue = error "This is a phantom method to suppress redundant-constaint warning. Do not evaluate this!"
-  getElementID :: e -> ElementID
-  getElementID = error "This is a phantom method to suppress redundant-constaint warning. Do not evaluate this!"
-  getLabel :: e -> Text
-  getLabel = error "This is a phantom method to suppress redundant-constaint warning. Do not evaluate this!"
+class Element e 
 
 instance Element Vertex
 instance Element Edge
@@ -221,44 +216,34 @@ gFilterL block = unsafeFromGScript (gMethodCall "filter" [gRaw "{" <> block <> g
 gFilter :: ToGTraversal g => g c s e -> GStep Filter s s
 gFilter step = unsafeFromGScript (gMethodCall "filter" [toGScript $ toGTraversal step])
 
-unsafeFilterStep :: (s -> a) -> GScript -> GStep Filter s s
-unsafeFilterStep _ = unsafeGStep
-
 -- | @.has@ step.
 gHas :: Element s
      => GScript -- ^ target
      -> GScript -- ^ expectation
      -> GStep Filter s s
-gHas target expec = unsafeFilterStep (getPropertyValue target)
-                    (gMethodCall "has" [target, expec])
-
-genericMultiArgFilter :: Text -- ^ method name
-                      -> (s -> a) -- ^ phantom filtering accessor
-                      -> [GScript] -- ^ arguments
-                      -> GStep Filter s s
-genericMultiArgFilter method_name f args =
-  unsafeFilterStep f $ gMethodCall method_name args
+gHas target expec = unsafeGStep $ gMethodCall "has" [target, expec]
 
 -- | @.hasLabel@ step
 gHasLabel :: Element s
           => [GScript] -- ^ expected label names
           -> GStep Filter s s
-gHasLabel = genericMultiArgFilter "hasLabel" getLabel
+gHasLabel = unsafeGStep . gMethodCall "hasLabel"
 
+-- | @.hasId@ step
 gHasId :: Element s
        => [GScript] -- ^ expected IDs
        -> GStep Filter s s
-gHasId = genericMultiArgFilter "hasId" getElementID
+gHasId = unsafeGStep . gMethodCall "hasId"
 
 -- | @.or@ step.
 gOr :: ToGTraversal g => [g c s e] -> GStep Filter s s
-gOr conds = unsafeFromGScript (gMethodCall "or" $ map toG conds)
+gOr conds = unsafeGStep (gMethodCall "or" $ map toG conds)
   where
     toG cond = toGScript $ toGTraversal cond
 
 -- | @.not@ step.
 gNot :: ToGTraversal g => g c s e -> GStep Filter s s
-gNot cond = unsafeFromGScript (gMethodCall "not" [toGScript $ toGTraversal cond])
+gNot cond = unsafeGStep (gMethodCall "not" [toGScript $ toGTraversal cond])
 
 -- | @.range@ step.
 gRange :: GScript
@@ -266,14 +251,14 @@ gRange :: GScript
        -> GScript
        -- ^ max
        -> GStep Filter s s
-gRange min_g max_g = unsafeFromGScript (gMethodCall "range" [min_g, max_g])
+gRange min_g max_g = unsafeGStep (gMethodCall "range" [min_g, max_g])
 
 -- | @.order@ and @.by@ steps
 gOrderBy :: ToGTraversal g
          => [(g c s e, GScript)]
          -- ^ (accessor steps, comparator) of each @.by@
          -> GStep Filter s s
-gOrderBy bys = unsafeFromGScript (gMethodCall "order" [] <> bys_g)
+gOrderBy bys = unsafeGStep (gMethodCall "order" [] <> bys_g)
   where
     bys_g = mconcat $ map toG bys
     toG (accessor, comparator) =
@@ -281,17 +266,14 @@ gOrderBy bys = unsafeFromGScript (gMethodCall "order" [] <> bys_g)
 
 -- | @.flatMap@ step
 gFlatMap :: ToGTraversal g => g c s e -> GStep c s e
-gFlatMap gt = unsafeFromGScript (gMethodCall "flatMap" [toGScript $ toGTraversal gt])
-
-unsafeTransformStep :: (a -> b) -> GScript -> GStep General a b
-unsafeTransformStep _ = unsafeGStep
+gFlatMap gt = unsafeGStep (gMethodCall "flatMap" [toGScript $ toGTraversal gt])
 
 -- | @.values@ step.
 gValues :: Element s
         => [GScript]
         -- ^ property keys
         -> GStep General s PropertyValue
-gValues keys = unsafeTransformStep (getPropertyValue "DUMMY") (gMethodCall "values" keys)
+gValues = unsafeGStep . gMethodCall "values"
 
 genericTraversalStep :: Text -> [GScript] -> GStep General Vertex e
 genericTraversalStep method_name edge_labels =
