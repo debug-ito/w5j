@@ -98,7 +98,7 @@ newtype GStep c s e = GStep { unGStep :: GScript }
 -- | 'id' is 'identity'.
 instance Category (GStep c) where
   id = forgetFilter gIdentity
-  bc . ab = unsafeFromGScript (unGStep ab <> unGStep bc)
+  bc . ab = unsafeGStep (unGStep ab <> unGStep bc)
 
 -- | Unsafely convert output type
 instance Functor (GStep c s) where
@@ -106,7 +106,7 @@ instance Functor (GStep c s) where
 
 -- | Call static method versions of the 'GStep' on @__@ class.
 instance ToGTraversal GStep where
-  toGTraversal step = unsafeFromGScript (gRaw "__" <> toGScript step)
+  toGTraversal step = unsafeGTraversal (gRaw "__" <> toGScript step)
   forgetFilter = GStep . unGStep
 
 instance GScriptLike (GStep c s e) where
@@ -168,17 +168,17 @@ unsafeGTraversal :: GScript -> GTraversal c s e
 unsafeGTraversal = GTraversal
 
 allVertices :: GTraversal General Void Vertex
-allVertices = unsafeFromGScript $ gRaw "g.V()"
+allVertices = unsafeGTraversal $ gRaw "g.V()"
 
 vertexByID :: GScript
               -- ^ Gremlin code for vertex ID.
            -> GTraversal General Void Vertex
-vertexByID vid = unsafeFromGScript (gRaw "g" <> gMethodCall "V" [vid])
+vertexByID vid = unsafeGTraversal (gRaw "g" <> gMethodCall "V" [vid])
 
 infixl 5 @.
 
 (@.) :: GTraversal c a b -> GStep c b d -> GTraversal c a d
-gt @. gs = unsafeFromGScript (toGScript gt <> toGScript gs)
+gt @. gs = unsafeGTraversal (toGScript gt <> toGScript gs)
 
 
 -- | Vertex in a TinkerPop graph.
@@ -204,17 +204,17 @@ unsafeGStep = GStep
 
 -- | @.identity@ step.
 gIdentity :: GStep Filter s s
-gIdentity = unsafeFromGScript $ gMethodCall "identity" []
+gIdentity = unsafeGStep $ gMethodCall "identity" []
 
 -- | @.filter@ step with lambda block.
 gFilterL :: GScript
          -- ^ Gremlin code inside filter's @{}@ block.
          -> GStep Filter s s
-gFilterL block = unsafeFromGScript (gMethodCall "filter" [gRaw "{" <> block <> gRaw "}"])
+gFilterL block = unsafeGStep (gMethodCall "filter" [gRaw "{" <> block <> gRaw "}"])
 
 -- | @.filter@ step with steps(traversal).
 gFilter :: ToGTraversal g => g c s e -> GStep Filter s s
-gFilter step = unsafeFromGScript (gMethodCall "filter" [toGScript $ toGTraversal step])
+gFilter step = unsafeGStep (gMethodCall "filter" [toGScript $ toGTraversal step])
 
 -- | @.has@ step.
 gHas :: Element s
@@ -277,7 +277,7 @@ gValues = unsafeGStep . gMethodCall "values"
 
 genericTraversalStep :: Text -> [GScript] -> GStep General Vertex e
 genericTraversalStep method_name edge_labels =
-  unsafeFromGScript (gMethodCall method_name edge_labels)
+  unsafeGStep (gMethodCall method_name edge_labels)
 
 -- | @.out@ step
 gOut :: [GScript] -- ^ edge labels
