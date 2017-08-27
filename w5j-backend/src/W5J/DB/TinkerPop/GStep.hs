@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 -- |
 -- Module: W5J.DB.TinkerPop.GStep
@@ -13,9 +13,11 @@ module W5J.DB.TinkerPop.GStep
          GTraversal,
          GScriptLike(..),
          ToGTraversal(..),
-         -- ** Step markers,
+         -- ** Step types
+         StepType,
          Filter,
-         General,
+         Transform,
+         SideEffect,
          -- ** Types in Gremlin
          Vertex,
          Edge,
@@ -63,8 +65,6 @@ import W5J.DB.TinkerPop.GScript (GScript, gRaw, gMethodCall)
 
 -- TODO: forgetFilter呼ぶのダルいな。。identityなどはarbitrary型でいいか？
 
--- TODO: ダミーのクラスメソッドって、本当に必要？
-
 -- TODO: もうちょい分類すると、markerはFilter, Transform, SideEffectが
 -- あるだろう。厄介なのは、and stepなんかはchild traversalがTransform
 -- なら結果(parent traversal)はFilterになれるということ。これをどう表
@@ -96,7 +96,7 @@ newtype GStep c s e = GStep { unGStep :: GScript }
                     deriving (Show)
 
 -- | 'id' is 'identity'.
-instance Category (GStep c) where
+instance StepType c => Category (GStep c) where
   id = forgetFilter gIdentity
   bc . ab = unsafeGStep (unGStep ab <> unGStep bc)
 
@@ -124,7 +124,7 @@ newtype GTraversal c s e = GTraversal { unGTraversal :: GScript }
                                   
 -- | 'id' is @__.identity()@. '(.)' compose 'GTraversal's by
 -- @.flatMap@ step.
-instance Category (GTraversal c) where
+instance StepType c => Category (GTraversal c) where
   id = toGTraversal $ forgetFilter gIdentity
   a . b = b @. gFlatMap a
 
@@ -143,8 +143,8 @@ instance GScriptLike (GTraversal c s e) where
 
 -- | Types that can convert to 'GTraversal'.
 class ToGTraversal g where
-  toGTraversal :: g c s e -> GTraversal c s e
-  forgetFilter :: g Filter s e -> g c s e
+  toGTraversal :: StepType c => g c s e -> GTraversal c s e
+  forgetFilter :: StepType c => g Filter s e -> g c s e
   -- ^ Treat a filtering step/traversal as any type of step. Use this
   -- for type matching.
 
@@ -153,26 +153,45 @@ instance ToGTraversal GTraversal where
   forgetFilter = GTraversal . unGTraversal
 
 
--- | Type marker for filtering steps.
+-- | Phantom type markers to describe the feature fo the
+-- step/traversal.
+class StepType t
+
+-- | StepType for filtering steps.
 --
 -- A filtering step is a step that does filtering only. It takes input
--- and outputs some of them without any modification or traversal
--- actions. Modification of orders (like sorting) is included as
--- filtering.
+-- and outputs some of them without any modification, traversal
+-- actions, or side-effects. Modification of orders (like sorting) is
+-- included as filtering.
 data Filter
 
--- | Type marker for any steps, whether it's filtering or not.
-data General
+instance StepType Filter
+
+-- | StepType for steps that are not filtering steps and without
+-- side-effects. This includes transformations, injections and graph
+-- traversal actions.
+data Transform
+
+instance StepType Transform
+
+-- | StepType modifier for steps that has side-effects.
+data SideEffect t
+
+-- Needs FlexibleInstances extension.
+instance StepType (SideEffect Filter)
+instance StepType (SideEffect Transform)
+
+
 
 unsafeGTraversal :: GScript -> GTraversal c s e
 unsafeGTraversal = GTraversal
 
-allVertices :: GTraversal General Void Vertex
+allVertices :: GTraversal Transform Void Vertex
 allVertices = unsafeGTraversal $ gRaw "g.V()"
 
 vertexByID :: GScript
               -- ^ Gremlin code for vertex ID.
-           -> GTraversal General Void Vertex
+           -> GTraversal Transform Void Vertex
 vertexByID vid = unsafeGTraversal (gRaw "g" <> gMethodCall "V" [vid])
 
 infixl 5 @.
@@ -199,7 +218,7 @@ data PropertyValue
 -- | ID object type for Elements
 data ElementID
 
-unsafeGStep :: GScript -> GStep c s e
+unsafeGStep :: StepType c => GScript -> GStep c s e
 unsafeGStep = GStep
 
 -- | @.identity@ step.
@@ -213,11 +232,12 @@ gFilterL :: GScript
 gFilterL block = unsafeGStep (gMethodCall "filter" [gRaw "{" <> block <> gRaw "}"])
 
 -- | @.filter@ step with steps(traversal).
-gFilter :: ToGTraversal g => g c s e -> GStep Filter s s
+gFilter :: (ToGTraversal g, StepType c) => g c s e -> GStep Filter s s
 gFilter step = unsafeGStep (gMethodCall "filter" [toGScript $ toGTraversal step])
+-- TODO: use Logic typeclass.
 
 -- | @.has@ step.
-gHas :: Element s
+gHas :: (Element s)
      => GScript -- ^ target
      -> GScript -- ^ expectation
      -> GStep Filter s s
@@ -236,14 +256,16 @@ gHasId :: Element s
 gHasId = unsafeGStep . gMethodCall "hasId"
 
 -- | @.or@ step.
-gOr :: ToGTraversal g => [g c s e] -> GStep Filter s s
+gOr :: (ToGTraversal g, StepType c) => [g c s e] -> GStep Filter s s
 gOr conds = unsafeGStep (gMethodCall "or" $ map toG conds)
   where
     toG cond = toGScript $ toGTraversal cond
+-- TODO: use Logic typeclass
 
 -- | @.not@ step.
-gNot :: ToGTraversal g => g c s e -> GStep Filter s s
+gNot :: (ToGTraversal g, StepType c) => g c s e -> GStep Filter s s
 gNot cond = unsafeGStep (gMethodCall "not" [toGScript $ toGTraversal cond])
+-- TODO: use Logic typeclass
 
 -- | @.range@ step.
 gRange :: GScript
@@ -254,7 +276,7 @@ gRange :: GScript
 gRange min_g max_g = unsafeGStep (gMethodCall "range" [min_g, max_g])
 
 -- | @.order@ and @.by@ steps
-gOrderBy :: ToGTraversal g
+gOrderBy :: (ToGTraversal g, StepType c)
          => [(g c s e, GScript)]
          -- ^ (accessor steps, comparator) of each @.by@
          -> GStep Filter s s
@@ -265,37 +287,37 @@ gOrderBy bys = unsafeGStep (gMethodCall "order" [] <> bys_g)
       gMethodCall "by" [(toGScript $ toGTraversal accessor), comparator]
 
 -- | @.flatMap@ step
-gFlatMap :: ToGTraversal g => g c s e -> GStep c s e
+gFlatMap :: (ToGTraversal g, StepType c) => g c s e -> GStep c s e
 gFlatMap gt = unsafeGStep (gMethodCall "flatMap" [toGScript $ toGTraversal gt])
 
 -- | @.values@ step.
 gValues :: Element s
         => [GScript]
         -- ^ property keys
-        -> GStep General s PropertyValue
+        -> GStep Transform s PropertyValue
 gValues = unsafeGStep . gMethodCall "values"
 
-genericTraversalStep :: Text -> [GScript] -> GStep General Vertex e
+genericTraversalStep :: Text -> [GScript] -> GStep Transform Vertex e
 genericTraversalStep method_name edge_labels =
   unsafeGStep (gMethodCall method_name edge_labels)
 
 -- | @.out@ step
 gOut :: [GScript] -- ^ edge labels
-     -> GStep General Vertex Vertex
+     -> GStep Transform Vertex Vertex
 gOut = genericTraversalStep "out"
 
 -- | @.outE@ step
 gOutE :: [GScript] -- ^ edge labels
-      -> GStep General Vertex Edge
+      -> GStep Transform Vertex Edge
 gOutE = genericTraversalStep "outE"
 
 -- | @.in@ step (@in@ is reserved by Haskell..)
 gIn :: [GScript] -- ^ edge labels
-    -> GStep General Vertex Vertex
+    -> GStep Transform Vertex Vertex
 gIn = genericTraversalStep "in"
 
 gInE :: [GScript] -- ^ edge labels
-     -> GStep General Vertex Edge
+     -> GStep Transform Vertex Edge
 gInE = genericTraversalStep "inE"
 
 ---- -- probably we can implement .as() step like this. GBuilder generates

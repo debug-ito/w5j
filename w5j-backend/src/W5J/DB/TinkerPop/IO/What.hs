@@ -73,7 +73,7 @@ updateWhat :: Connection
 updateWhat = undefined
 -- TODO. We can just delete and re-create When vertices.
 
-completeWhatStep :: GStep GStep.General GStep.Vertex ()
+completeWhatStep :: GStep GStep.Transform GStep.Vertex ()
 completeWhatStep = unsafeGStep $ gMethodCall "map" [block]
   where
     block = gRaw "{ getCompleteWhat(it.get()) }"

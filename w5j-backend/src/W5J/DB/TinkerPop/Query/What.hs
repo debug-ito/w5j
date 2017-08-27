@@ -24,7 +24,7 @@ import W5J.DB.TinkerPop.GStep
   ( (@.), toGScript, toGTraversal, forgetFilter,
     allVertices, gHasLabel, gHas, gHasId, gOrderBy,
     unsafeGTraversal, gValues, gFilter, gOut, gOr,
-    GTraversal, Vertex, General
+    GTraversal, Vertex, Transform
   )
 import W5J.DB.TinkerPop.Query.Common
   ( Query, QOrder(..),
@@ -63,7 +63,7 @@ data QCond = QCondTerm Text
              -- ^ compare 'whatWhen' with the given constant 'When'.
            deriving (Show,Eq,Ord)
 
-buildQuery :: QueryWhat -> GBuilder (GTraversal General Void Vertex)
+buildQuery :: QueryWhat -> GBuilder (GTraversal Transform Void Vertex)
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   start <- makeStart
