@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings, FlexibleInstances, MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 -- |
 -- Module: W5J.DB.TinkerPop.GStep
@@ -18,6 +18,7 @@ module W5J.DB.TinkerPop.GStep
          Filter,
          Transform,
          SideEffect,
+         Logic,
          -- ** Types in Gremlin
          Vertex,
          Edge,
@@ -63,23 +64,10 @@ import qualified Data.Text as T
 import Data.Void (Void)
 import W5J.DB.TinkerPop.GScript (GScript, gRaw, gMethodCall)
 
--- TODO: forgetFilter呼ぶのダルいな。。identityなどはarbitrary型でいいか？
+-- TODO: forgetFilter呼ぶのダルいな。。identityなどFilter stepを返すや
+-- つはStepType c => cのstepを返せばいいか？
 
--- TODO: もうちょい分類すると、markerはFilter, Transform, SideEffectが
--- あるだろう。厄介なのは、and stepなんかはchild traversalがTransform
--- なら結果(parent traversal)はFilterになれるということ。これをどう表
--- 現するか？
---
--- type classを使って全パターンinstance化するのでもいい？なんか警告で
--- ない？
---
--- SideEffectのkindは(* -> *)か？つまり(SideEffect Filter),
--- (SideEffect Transform)が考えられそうではある。
---
--- いっそのこと、SideEffectはGTraversalやGStepを包むモナドにするか？そ
--- うすると、child traversalがSideEffectならparentのSideEffectにならざ
--- るを得ない。しかし、依然としてFilterやTransformの型マーカーは必要に
--- なり、ずいぶん型体系がブサイクになる。。
+-- TODO: Vertex, Edgeをtypeclassにできないか。
 
 
 
@@ -181,6 +169,18 @@ data SideEffect t
 instance StepType (SideEffect Filter)
 instance StepType (SideEffect Transform)
 
+-- | Relation of 'StepType's in logic step/traversals, e.g., 'gFilter'
+-- and 'gOr'. @c@ is the 'StepType' of logic operands (children), @p@
+-- is the 'StepType' of the result (parent).
+class Logic c p
+
+instance (StepType p) => Logic Filter p
+instance (StepType p) => Logic Transform p
+-- ^ 'Transform' without any side-effect doesn't restrict the logic
+-- result.
+instance (StepType c, StepType p) => Logic (SideEffect c) (SideEffect p)
+-- ^ 'SideEffect' is inherited by the logic result.
+
 
 
 unsafeGTraversal :: GScript -> GTraversal c s e
@@ -232,9 +232,8 @@ gFilterL :: GScript
 gFilterL block = unsafeGStep (gMethodCall "filter" [gRaw "{" <> block <> gRaw "}"])
 
 -- | @.filter@ step with steps(traversal).
-gFilter :: (ToGTraversal g, StepType c) => g c s e -> GStep Filter s s
+gFilter :: (ToGTraversal g, StepType c, StepType p, Logic c p) => g c s e -> GStep p s s
 gFilter step = unsafeGStep (gMethodCall "filter" [toGScript $ toGTraversal step])
--- TODO: use Logic typeclass.
 
 -- | @.has@ step.
 gHas :: (Element s)
@@ -256,16 +255,14 @@ gHasId :: Element s
 gHasId = unsafeGStep . gMethodCall "hasId"
 
 -- | @.or@ step.
-gOr :: (ToGTraversal g, StepType c) => [g c s e] -> GStep Filter s s
+gOr :: (ToGTraversal g, StepType c, StepType p, Logic c p) => [g c s e] -> GStep p s s
 gOr conds = unsafeGStep (gMethodCall "or" $ map toG conds)
   where
     toG cond = toGScript $ toGTraversal cond
--- TODO: use Logic typeclass
 
 -- | @.not@ step.
-gNot :: (ToGTraversal g, StepType c) => g c s e -> GStep Filter s s
+gNot :: (ToGTraversal g, StepType c, StepType p, Logic c p) => g c s e -> GStep p s s
 gNot cond = unsafeGStep (gMethodCall "not" [toGScript $ toGTraversal cond])
--- TODO: use Logic typeclass
 
 -- | @.range@ step.
 gRange :: GScript
@@ -276,10 +273,10 @@ gRange :: GScript
 gRange min_g max_g = unsafeGStep (gMethodCall "range" [min_g, max_g])
 
 -- | @.order@ and @.by@ steps
-gOrderBy :: (ToGTraversal g, StepType c)
+gOrderBy :: (ToGTraversal g, StepType c, StepType p, Logic c p)
          => [(g c s e, GScript)]
          -- ^ (accessor steps, comparator) of each @.by@
-         -> GStep Filter s s
+         -> GStep p s s
 gOrderBy bys = unsafeGStep (gMethodCall "order" [] <> bys_g)
   where
     bys_g = mconcat $ map toG bys
