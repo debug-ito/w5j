@@ -72,7 +72,8 @@ test-suite spec
   build-depends:        base, w5j-backend, aeson, text,
                         hspec,
                         QuickCheck,
-                        heredoc
+                        heredoc,
+                        hint
 
 source-repository head
   type:                 git
