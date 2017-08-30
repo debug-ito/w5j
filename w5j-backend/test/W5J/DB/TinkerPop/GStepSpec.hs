@@ -15,20 +15,20 @@ spec = describe "Logic typeclass" $ do
   let c = checkLogicCompatible
   c "Filter" "Filter" True
   c "Filter" "Transform" True
-  c "Filter" "SideEffect Filter" True
-  c "Filter" "SideEffect Transform" True
+  c "Filter" "(SideEffect Filter)" True
+  c "Filter" "(SideEffect Transform)" True
   c "Transform" "Filter" True
   c "Transform" "Transform" True
-  c "Transform" "SideEffect Filter" True
-  c "Transform" "SideEffect Transform" True
-  c "SideEffect Filter" "Filter" False
-  c "SideEffect Filter" "Transform" False
-  c "SideEffect Filter" "SideEffect Filter" True
-  c "SideEffect Filter" "SideEffect Transform" True
-  c "SideEffect Transform" "Filter" False
-  c "SideEffect Transform" "Transform" False
-  c "SideEffect Transform" "SideEffect Filter" True
-  c "SideEffect Transform" "SideEffect Transform" True
+  c "Transform" "(SideEffect Filter)" True
+  c "Transform" "(SideEffect Transform)" True
+  c "(SideEffect Filter)" "Filter" False
+  c "(SideEffect Filter)" "Transform" False
+  c "(SideEffect Filter)" "(SideEffect Filter)" True
+  c "(SideEffect Filter)" "(SideEffect Transform)" True
+  c "(SideEffect Transform)" "Filter" False
+  c "(SideEffect Transform)" "Transform" False
+  c "(SideEffect Transform)" "(SideEffect Filter)" True
+  c "(SideEffect Transform)" "(SideEffect Transform)" True
   
 
 toErrString :: Either InterpreterError a -> Either String a
