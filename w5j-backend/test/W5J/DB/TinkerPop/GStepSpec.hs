@@ -30,7 +30,8 @@ checkLogicCompatible child parent expected = specify label $ doCheck
       loadModules ["src/W5J/DB/TinkerPop/GStep.hs"]
       setTopLevelModules ["W5J.DB.TinkerPop.GStep"]
       typeChecks code
-    code =    "hoge :: GStep " ++ parent ++ " s s\n"
-           ++ "hoge = gFilter x\n"
-           ++ "  where x :: GStep " ++ child ++ " s s"
-           ++ "        x = undefined"
+    code = "let f :: GStep " ++ child ++ " s s -> GStep " ++ parent ++ " s s; "
+           ++ "f = gFilter; "
+           ++ "child :: GStep " ++ child ++ " s s; "
+           ++ "child = undefined; "
+           ++ "in f child"
