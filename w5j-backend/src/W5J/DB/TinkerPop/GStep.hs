@@ -175,7 +175,7 @@ class Lift from to
 
 instance (StepType t) => Lift Filter t
 instance Lift Transform Transform
-instance (StepType s) => Lift Transform (SideEffect s)
+instance Lift Transform (SideEffect Transform)
 instance (Lift f t) => Lift (SideEffect f) (SideEffect t)
 
 -- | Relation of 'StepType's in logic step/traversals, e.g., 'gFilter'
