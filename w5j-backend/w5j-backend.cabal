@@ -26,16 +26,17 @@ library
                         W5J.Interval,
                         W5J.Time,
                         W5J.Aeson,
+                        W5J.DB.TinkerPop.GScript,
+                        W5J.DB.TinkerPop.GBuilder,
+                        W5J.DB.TinkerPop.GStep,
                         W5J.DB.TinkerPop.IO.Connection,
                         W5J.DB.TinkerPop.IO.What,
                         W5J.DB.TinkerPop.IO.Misc,
                         W5J.DB.TinkerPop.Query.Common,
                         W5J.DB.TinkerPop.Query.What,
-                        W5J.DB.TinkerPop.GScript
-  other-modules:        W5J.DB.TinkerPop.Error,
-                        W5J.DB.TinkerPop.Parse,
-                        W5J.DB.TinkerPop.GBuilder,
-                        W5J.DB.TinkerPop.GStep
+                        W5J.DB.TinkerPop.Error,
+                        W5J.DB.TinkerPop.Parse
+  -- other-modules:        
   build-depends:        base,
                         text,
                         time,
