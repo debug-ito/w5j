@@ -27,7 +27,7 @@ import Control.Category ((>>>))
 import W5J.Interval (Interval, sup, inf, (...))
 import W5J.DB.TinkerPop.GBuilder (GBuilder, newBind)
 import W5J.DB.TinkerPop.GScript (GScript, gRaw)
-import W5J.DB.TinkerPop.GStep (GStep, Filter, gRange, gOr, gNot, gIdentity)
+import W5J.DB.TinkerPop.GStep (GStep, Filter, Transform, gRange, gOr, gNot, gIdentity, liftType)
 
 -- | Range of elements indices to query. Min is inclusive, max is
 -- exclusive. Starting from 0.
@@ -81,16 +81,16 @@ data Query c b =
 -- 'Query'.
 buildQueryWith :: (c -> GBuilder (GStep Filter s s))
                -- ^ generate Gremlin step for the leaf condition @c@.
-               -> (QOrder -> b -> GBuilder (GStep Filter s s))
+               -> (QOrder -> b -> GBuilder (GStep Transform s s))
                -- ^ generate Gremlin @.order@ and @.by@ step(s) for
                -- ordering.
                -> Query c b
-               -> GBuilder (GStep Filter s s)
+               -> GBuilder (GStep Transform s s)
 buildQueryWith buildCond buildOBy query = do
   gremlin_cond <- buildCondTree $ queryCond query
   gremlin_orderby <- buildOBy (queryOrder query) (queryOrderBy query)
   gremlin_range <- buildRange $ queryRange query
-  return (gremlin_cond >>> gremlin_orderby >>> gremlin_range)
+  return (liftType gremlin_cond >>> gremlin_orderby >>> gremlin_range)
   where
     buildRange range = do
       v_min <- newBind $ qRangeMin range

@@ -48,11 +48,9 @@ module W5J.DB.TinkerPop.GStep
          gOr,
          gAnd,
          gNot,
-         gRange,
-         gRange',
-         -- ** Sorting step
-         gOrderBy,
          -- ** Transformation step
+         gOrderBy,
+         gRange,
          gFlatMap,
          gValues,
          -- ** Graph traversal step
@@ -151,9 +149,15 @@ class StepType t
 -- | StepType for filtering steps.
 --
 -- A filtering step is a step that does filtering only. It takes input
--- and outputs some of them without any modification, traversal
--- actions, or side-effects. Modification of orders (like sorting) is
--- included as filtering.
+-- and outputs some of them without any modification, reordering,
+-- traversal actions, or side-effects. Filtering decision must be
+-- solely based on each element.
+--
+-- This leads to the following property.
+--
+-- > s1, s2 :: GStep Filter s s
+-- > gFilter s1 == s1
+-- > gAnd [s1, s2] == s1 >>> s2
 data Filter
 
 instance StepType Filter
@@ -313,18 +317,14 @@ gRange :: GScript
        -- ^ min
        -> GScript
        -- ^ max
-       -> GStep Filter s s
+       -> GStep Transform s s
 gRange min_g max_g = unsafeGStep (gMethodCall "range" [min_g, max_g])
 
--- | Polymorphic version of 'gRange'.
-gRange' :: (StepType c) => GScript -> GScript -> GStep c s s
-gRange' mi ma = liftType $ gRange mi ma
-
 -- | @.order@ and @.by@ steps
-gOrderBy :: (ToGTraversal g, StepType c, StepType p, Logic c p)
-         => [(g c s e, GScript)]
+gOrderBy :: (ToGTraversal g)
+         => [(g Transform s e, GScript)]
          -- ^ (accessor steps, comparator) of each @.by@
-         -> GStep p s s
+         -> GStep Transform s s
 gOrderBy bys = unsafeGStep (gMethodCall "order" [] <> bys_g)
   where
     bys_g = mconcat $ map toG bys
