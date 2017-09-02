@@ -207,6 +207,8 @@ vertexByID vid = unsafeGTraversal (gRaw "g" <> gMethodCall "V" [vid])
 
 infixl 5 @.
 
+-- | Apply the 'GStep' to the 'GTraversal'. In Gremlin, this means
+-- calling a chain of methods on the Traversal object.
 (@.) :: GTraversal c a b -> GStep c b d -> GTraversal c a d
 gt @. gs = unsafeGTraversal (toGScript gt <> toGScript gs)
 
@@ -355,5 +357,5 @@ gInE = genericTraversalStep "inE"
 ---- -- probably we can implement .as() step like this. GBuilder generates
 ---- -- some 'Label', which is passed to .as() step and can be passed later
 ---- -- to .select() step etc.
----- as :: GBuilder (Label, GStep Filter s s)
----- as = undefined
+---- gAs :: GBuilder (Label, GStep Filter s s)
+---- gAs = undefined
