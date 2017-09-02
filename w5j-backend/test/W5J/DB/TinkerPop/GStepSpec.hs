@@ -37,8 +37,8 @@ toErrString :: Either InterpreterError a -> Either String a
 toErrString (Right a) = Right a
 toErrString (Left e) = Left $ show e
 
-checkLogicCompatible :: String -> String -> Bool -> Spec
-checkLogicCompatible child parent expect_ok = specify label $ doCheck
+checkStepTypeRelation :: (String -> String -> String) -> String -> String -> Bool -> Spec
+checkStepTypeRelation makeCode child parent expect_ok = specify label $ doCheck
   where
     label = child ++ " -> " ++ parent
     doCheck = do
@@ -49,9 +49,14 @@ checkLogicCompatible child parent expect_ok = specify label $ doCheck
       set [searchPath := ["src"]]
       loadModules ["src/W5J/DB/TinkerPop/GStep.hs"]
       setTopLevelModules ["W5J.DB.TinkerPop.GStep"]
-      typeOf code
-    code = "let f :: GStep " ++ child ++ " s s -> GStep " ++ parent ++ " s s; "
-           ++ "f = gFilter; "
-           ++ "child :: GStep " ++ child ++ " s s; "
-           ++ "child = undefined; "
-           ++ "in f child"
+      typeOf $ makeCode child parent
+
+checkLogicCompatible :: String -> String -> Bool -> Spec
+checkLogicCompatible = checkStepTypeRelation makeCode
+  where
+    makeCode child parent =
+      "let f :: GStep " ++ child ++ " s s -> GStep " ++ parent ++ " s s; "
+      ++ "f = gFilter; "
+      ++ "child :: GStep " ++ child ++ " s s; "
+      ++ "child = undefined; "
+      ++ "in f child"
