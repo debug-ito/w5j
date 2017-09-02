@@ -22,8 +22,7 @@ import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
 import W5J.DB.TinkerPop.GBuilder (newBind, submitGBuilder)
 import W5J.DB.TinkerPop.GScript (gFunCall, gMethodCall, gRaw)
 import W5J.DB.TinkerPop.GStep
-  ( vertexByID, (@.), gHasLabel, unsafeGStep, GStep, toGScript,
-    liftType
+  ( vertexByID, (@.), gHasLabel', unsafeGStep, GStep, toGScript,
   )
 import qualified W5J.DB.TinkerPop.GStep as GStep
 import W5J.DB.TinkerPop.IO.Connection (Connection)
@@ -88,7 +87,7 @@ getWhatById conn wid = do
   where
     gbuilder = do
       v_wid <- newBind wid
-      return $ toGScript (vertexByID v_wid @. (liftType $ gHasLabel ["what"]) @. completeWhatStep)
+      return $ toGScript (vertexByID v_wid @. (gHasLabel' ["what"]) @. completeWhatStep)
 
 queryWhat :: Connection -> QueryWhat.QueryWhat -> IO [What]
 queryWhat conn query =

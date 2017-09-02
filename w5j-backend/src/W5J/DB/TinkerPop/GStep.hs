@@ -35,14 +35,20 @@ module W5J.DB.TinkerPop.GStep
          unsafeGStep,
          -- ** Filter step
          gIdentity,
+         gIdentity',
          gFilterL,
+         gFilterL',
          gFilter,
          gHas,
+         gHas',
          gHasLabel,
+         gHasLabel',
          gHasId,
+         gHasId',
          gOr,
          gNot,
          gRange,
+         gRange',
          -- ** Sorting step
          gOrderBy,
          -- ** Transformation step
@@ -65,11 +71,7 @@ import qualified Data.Text as T
 import Data.Void (Void)
 import W5J.DB.TinkerPop.GScript (GScript, gRaw, gMethodCall)
 
--- TODO: forgetFilter呼ぶのダルいな。。identityなどFilter stepを返すや
--- つはStepType c => cのstepを返せばいいか？
-
 -- TODO: Vertex, Edgeをtypeclassにできないか。
-
 
 
 -- | A Gremlin Step (method call) that takes data @s@ from upstream
@@ -234,11 +236,19 @@ unsafeGStep = GStep
 gIdentity :: GStep Filter s s
 gIdentity = unsafeGStep $ gMethodCall "identity" []
 
+-- | Polymorphic version of 'gIdentity'.
+gIdentity' :: StepType c => GStep c s s
+gIdentity' = liftType $ gIdentity
+
 -- | @.filter@ step with lambda block.
 gFilterL :: GScript
          -- ^ Gremlin code inside filter's @{}@ block.
          -> GStep Filter s s
 gFilterL block = unsafeGStep (gMethodCall "filter" [gRaw "{" <> block <> gRaw "}"])
+
+-- | Polymorphic version of 'gFilterL'.
+gFilterL' :: (StepType c) => GScript -> GStep c s s
+gFilterL' = liftType . gFilterL
 
 -- | @.filter@ step with steps(traversal).
 gFilter :: (ToGTraversal g, StepType c, StepType p, Logic c p) => g c s e -> GStep p s s
@@ -251,17 +261,29 @@ gHas :: (Element s)
      -> GStep Filter s s
 gHas target expec = unsafeGStep $ gMethodCall "has" [target, expec]
 
+-- | Polymorphic version of 'gHas'.
+gHas' :: (Element s, StepType c) => GScript -> GScript -> GStep c s s
+gHas' t e = liftType $ gHas t e
+
 -- | @.hasLabel@ step
 gHasLabel :: Element s
           => [GScript] -- ^ expected label names
           -> GStep Filter s s
 gHasLabel = unsafeGStep . gMethodCall "hasLabel"
 
+-- | Polymorphic version of 'gHasLabel'.
+gHasLabel' :: (Element s, StepType c) => [GScript] -> GStep c s s
+gHasLabel' = liftType . gHasLabel
+
 -- | @.hasId@ step
 gHasId :: Element s
        => [GScript] -- ^ expected IDs
        -> GStep Filter s s
 gHasId = unsafeGStep . gMethodCall "hasId"
+
+-- | Polymorphic version of 'gHasId'.
+gHasId' :: (Element s, StepType c) => [GScript] -> GStep c s s
+gHasId' = liftType . gHasId
 
 -- | @.or@ step.
 gOr :: (ToGTraversal g, StepType c, StepType p, Logic c p) => [g c s e] -> GStep p s s
@@ -280,6 +302,10 @@ gRange :: GScript
        -- ^ max
        -> GStep Filter s s
 gRange min_g max_g = unsafeGStep (gMethodCall "range" [min_g, max_g])
+
+-- | Polymorphic version of 'gRange'.
+gRange' :: (StepType c) => GScript -> GScript -> GStep c s s
+gRange' mi ma = liftType $ gRange mi ma
 
 -- | @.order@ and @.by@ steps
 gOrderBy :: (ToGTraversal g, StepType c, StepType p, Logic c p)
