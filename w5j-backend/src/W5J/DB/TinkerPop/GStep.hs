@@ -46,6 +46,7 @@ module W5J.DB.TinkerPop.GStep
          gHasId,
          gHasId',
          gOr,
+         gAnd,
          gNot,
          gRange,
          gRange',
@@ -287,11 +288,21 @@ gHasId = unsafeGStep . gMethodCall "hasId"
 gHasId' :: (Element s, StepType c) => [GScript] -> GStep c s s
 gHasId' = liftType . gHasId
 
--- | @.or@ step.
-gOr :: (ToGTraversal g, StepType c, StepType p, Logic c p) => [g c s e] -> GStep p s s
-gOr conds = unsafeGStep (gMethodCall "or" $ map toG conds)
+multiLogic :: (ToGTraversal g, StepType c, StepType p, Logic c p)
+           => Text -- ^ method name
+           -> [g c s e]
+           -> GStep p s s
+multiLogic method_name conds = unsafeGStep (gMethodCall method_name $ map toG conds)
   where
     toG cond = toGScript $ toGTraversal cond
+
+-- | @.and@ step.
+gAnd :: (ToGTraversal g, StepType c, StepType p, Logic c p) => [g c s e] -> GStep p s s
+gAnd = multiLogic "and"
+
+-- | @.or@ step.
+gOr :: (ToGTraversal g, StepType c, StepType p, Logic c p) => [g c s e] -> GStep p s s
+gOr = multiLogic "or"
 
 -- | @.not@ step.
 gNot :: (ToGTraversal g, StepType c, StepType p, Logic c p) => g c s e -> GStep p s s
