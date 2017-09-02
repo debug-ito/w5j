@@ -84,6 +84,6 @@ checkLiftCompatible :: String -> String -> Bool -> Spec
 checkLiftCompatible = checkStepTypeRelation makeCode
   where
     makeCode child parent =
-      "let f :: GStep " ++ child ++ "s e -> GStep" ++ parent ++ " s e; "
+      "let f :: GStep " ++ child ++ " s e -> GStep " ++ parent ++ " s e; "
       ++ "f = liftType; "
       ++ "in f"
