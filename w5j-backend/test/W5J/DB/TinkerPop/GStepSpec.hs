@@ -1,10 +1,12 @@
 module W5J.DB.TinkerPop.GStepSpec (main,spec) where
 
+import Data.Either (isRight)
 import Language.Haskell.Interpreter
   ( loadModules, OptionVal((:=)), set, searchPath,
     setTopLevelModules, runInterpreter, InterpreterError,
-    typeChecks
+    typeOf
   )
+import System.IO (stderr, hPutStrLn)
 import Test.Hspec
 
 main :: IO ()
@@ -36,17 +38,18 @@ toErrString (Right a) = Right a
 toErrString (Left e) = Left $ show e
 
 checkLogicCompatible :: String -> String -> Bool -> Spec
-checkLogicCompatible child parent expected = specify label $ doCheck
+checkLogicCompatible child parent expect_ok = specify label $ doCheck
   where
     label = child ++ " -> " ++ parent
     doCheck = do
-      result <- fmap toErrString $ runInterpreter isTypeOK
-      result `shouldBe` Right expected
-    isTypeOK = do
+      result <- fmap toErrString $ runInterpreter compiledParent
+      -- hPutStrLn stderr ("## " ++ label ++ ": " ++ show result)
+      isRight result `shouldBe` expect_ok
+    compiledParent = do
       set [searchPath := ["src"]]
       loadModules ["src/W5J/DB/TinkerPop/GStep.hs"]
       setTopLevelModules ["W5J.DB.TinkerPop.GStep"]
-      typeChecks code
+      typeOf code
     code = "let f :: GStep " ++ child ++ " s s -> GStep " ++ parent ++ " s s; "
            ++ "f = gFilter; "
            ++ "child :: GStep " ++ child ++ " s s; "
