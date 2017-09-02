@@ -18,6 +18,7 @@ module W5J.DB.TinkerPop.GStep
          Filter,
          Transform,
          SideEffect,
+         Lift,
          Logic,
          -- ** Types in Gremlin
          Vertex,
@@ -85,7 +86,7 @@ newtype GStep c s e = GStep { unGStep :: GScript }
 
 -- | 'id' is 'identity'.
 instance StepType c => Category (GStep c) where
-  id = forgetFilter gIdentity
+  id = liftType gIdentity
   bc . ab = unsafeGStep (unGStep ab <> unGStep bc)
 
 -- | Unsafely convert output type
@@ -95,7 +96,7 @@ instance Functor (GStep c s) where
 -- | Call static method versions of the 'GStep' on @__@ class.
 instance ToGTraversal GStep where
   toGTraversal step = unsafeGTraversal (gRaw "__" <> toGScript step)
-  forgetFilter = GStep . unGStep
+  liftType = GStep . unGStep
 
 instance GScriptLike (GStep c s e) where
   unsafeFromGScript = GStep
@@ -113,7 +114,7 @@ newtype GTraversal c s e = GTraversal { unGTraversal :: GScript }
 -- | 'id' is @__.identity()@. '(.)' compose 'GTraversal's by
 -- @.flatMap@ step.
 instance StepType c => Category (GTraversal c) where
-  id = toGTraversal $ forgetFilter gIdentity
+  id = toGTraversal $ liftType gIdentity
   a . b = b @. gFlatMap a
 
 -- | Unsafely convert output type.
@@ -132,13 +133,12 @@ instance GScriptLike (GTraversal c s e) where
 -- | Types that can convert to 'GTraversal'.
 class ToGTraversal g where
   toGTraversal :: StepType c => g c s e -> GTraversal c s e
-  forgetFilter :: StepType c => g Filter s e -> g c s e
-  -- ^ Treat a filtering step/traversal as any type of step. Use this
-  -- for type matching.
+  liftType :: (StepType from, StepType to, Lift from to) => g from s e -> g to s e
+  -- ^ Lift 'StepType' @from@ to @to@. Use this for type matching.
 
 instance ToGTraversal GTraversal where
   toGTraversal = id
-  forgetFilter = GTraversal . unGTraversal
+  liftType = GTraversal . unGTraversal
 
 
 -- | Phantom type markers to describe the feature fo the
@@ -168,6 +168,15 @@ data SideEffect t
 -- Needs FlexibleInstances extension.
 instance StepType (SideEffect Filter)
 instance StepType (SideEffect Transform)
+
+-- | Relation of 'StepType's in which one includes the other. @from@
+-- can be lifted to @to@, because @to@ is more powerful than @to@.
+class Lift from to
+
+instance (StepType t) => Lift Filter t
+instance Lift Transform Transform
+instance (StepType s) => Lift Transform (SideEffect s)
+instance (Lift f t) => Lift (SideEffect f) (SideEffect t)
 
 -- | Relation of 'StepType's in logic step/traversals, e.g., 'gFilter'
 -- and 'gOr'. @c@ is the 'StepType' of logic operands (children), @p@

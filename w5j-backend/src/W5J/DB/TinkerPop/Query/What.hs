@@ -21,7 +21,7 @@ import Data.Void (Void)
 import W5J.DB.TinkerPop.GBuilder (GBuilder, newBind, GScript)
 import W5J.DB.TinkerPop.GScript (gRaw, gFunCall, gLiteral)
 import W5J.DB.TinkerPop.GStep
-  ( (@.), toGScript, toGTraversal, forgetFilter,
+  ( (@.), toGScript, toGTraversal, liftType,
     allVertices, gHasLabel, gHas, gHasId, gOrderBy,
     unsafeGTraversal, gValues, gFilter, gOut, gOr,
     GTraversal, Vertex, Transform
@@ -67,9 +67,9 @@ buildQuery :: QueryWhat -> GBuilder (GTraversal Transform Void Vertex)
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   start <- makeStart
-  return $ (start @. forgetFilter traversal)
+  return $ (start @. liftType traversal)
   where
-    makeStart = return (allVertices @. (forgetFilter $ gHasLabel ["what"]))
+    makeStart = return (allVertices @. (liftType $ gHasLabel ["what"]))
     buildCond (QCondTerm t) = do
       vt <- newBind t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
@@ -85,7 +85,7 @@ buildQuery query = do
       vid <- newBind where_id
       return $ gFilter $ filterTraversal vid
         where
-          filterTraversal vid = gOut ["where"] >>> (forgetFilter $ gHasId [vid])
+          filterTraversal vid = gOut ["where"] >>> (liftType $ gHasId [vid])
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
