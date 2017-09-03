@@ -57,9 +57,13 @@ module W5J.DB.TinkerPop.GStep
          gValues,
          -- ** Graph traversal step
          gOut,
+         gOut',
          gOutE,
+         gOutE',
          gIn,
-         gInE
+         gIn',
+         gInE,
+         gInE'
        ) where
 
 import Prelude hiding (or, filter, not)
@@ -359,27 +363,44 @@ genericTraversalStep method_name edge_labels =
   unsafeGStep (gMethodCall method_name edge_labels)
 
 -- | @.out@ step
-gOut :: (Vertex v1, Vertex v2)
+gOut :: (Vertex v)
      => [GScript] -- ^ edge labels
-     -> GStep Transform v1 v2
-gOut = genericTraversalStep "out"
+     -> GStep Transform v GVertex
+gOut = gOut'
+
+-- | Polymorphic version of 'gOut'.
+gOut' :: (Vertex v1, Vertex v2) => [GScript] -> GStep Transform v1 v2
+gOut' = genericTraversalStep "out"
 
 -- | @.outE@ step
-gOutE :: (Vertex v, Edge e)
+gOutE :: (Vertex v)
       => [GScript] -- ^ edge labels
-      -> GStep Transform v e
-gOutE = genericTraversalStep "outE"
+      -> GStep Transform v GEdge
+gOutE = gOutE'
 
--- | @.in@ step (@in@ is reserved by Haskell..)
-gIn :: (Vertex v1, Vertex v2)
+-- | Polymorphic version of 'gOutE'
+gOutE' :: (Vertex v, Edge e) => [GScript] -> GStep Transform v e
+gOutE' = genericTraversalStep "outE"
+
+-- | @.in@ step
+gIn :: (Vertex v)
     => [GScript] -- ^ edge labels
-    -> GStep Transform v1 v2
-gIn = genericTraversalStep "in"
+    -> GStep Transform v GVertex
+gIn = gIn'
 
-gInE :: (Vertex v, Edge e)
+-- | Polymorphic version of 'gIn'.
+gIn' :: (Vertex v1, Vertex v2) => [GScript] -> GStep Transform v1 v2
+gIn' = genericTraversalStep "in"
+
+-- | @.inE@ step.
+gInE :: (Vertex v)
      => [GScript] -- ^ edge labels
-     -> GStep Transform v e
-gInE = genericTraversalStep "inE"
+     -> GStep Transform v GEdge
+gInE = gInE
+
+-- | Polymorphic version of 'gInE'.
+gInE' :: (Vertex v, Edge e) => [GScript] -> GStep Transform v e
+gInE' = genericTraversalStep "inE"
 
 ---- -- probably we can implement .as() step like this. GBuilder generates
 ---- -- some 'Label', which is passed to .as() step and can be passed later
