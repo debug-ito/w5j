@@ -60,8 +60,11 @@ data QCond = QCondTerm Text
              -- ^ match for 'whatWheres' by ID.
            | QCondWhereName Text
              -- ^ match for 'whatWheres' by name.
+           | QCondWhenExists
+             -- ^ match if 'whatWhen' is not 'Nothing'.
            | QCondWhen QCondWhenTerm QComparator When
-             -- ^ compare 'whatWhen' with the given constant 'When'.
+             -- ^ compare 'whatWhen' with the given constant
+             -- 'When'. This implies the 'whatWhen' is not 'Nothing'.
            deriving (Show,Eq,Ord)
 
 -- | A 'Vertex' for \"what\" data.
@@ -92,6 +95,7 @@ buildQuery query = do
       vid <- newBind where_id
       return $ gFilter (gOut ["where"] >>> gHasId' [vid])
     buildCond (QCondWhereName _) = undefined -- TODO
+    buildCond (QCondWhenExists) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
       return $ gOrderBy [byWhen "when_from", byWhen "when_to", commonBy]
