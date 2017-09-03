@@ -9,7 +9,8 @@ module W5J.DB.TinkerPop.Query.What
        ( QueryWhat,
          buildQuery,
          QOrderBy(..),
-         QCond(..)
+         QCond(..),
+         WhatVertex
        ) where
 
 import Control.Category ((>>>))
@@ -24,7 +25,7 @@ import W5J.DB.TinkerPop.GStep
   ( (@.), toGScript, toGTraversal, liftType,
     allVertices, gHasLabel', gHas, gHasId', gOrderBy,
     unsafeGTraversal, gValues, gFilter, gOut, gOr,
-    GTraversal, Vertex, Transform
+    GTraversal, Transform, Vertex, Element
   )
 import W5J.DB.TinkerPop.Query.Common
   ( Query, QOrder(..),
@@ -63,7 +64,13 @@ data QCond = QCondTerm Text
              -- ^ compare 'whatWhen' with the given constant 'When'.
            deriving (Show,Eq,Ord)
 
-buildQuery :: QueryWhat -> GBuilder (GTraversal Transform Void Vertex)
+-- | A 'Vertex' for \"what\" data.
+data WhatVertex
+
+instance Element WhatVertex
+instance Vertex WhatVertex
+
+buildQuery :: QueryWhat -> GBuilder (GTraversal Transform Void WhatVertex)
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   start <- makeStart

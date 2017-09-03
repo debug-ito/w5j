@@ -21,9 +21,11 @@ module W5J.DB.TinkerPop.GStep
          Lift,
          Logic,
          -- ** Types in Gremlin
+         Element,
          Vertex,
          Edge,
-         Element,
+         GVertex,
+         GEdge,
          PropertyValue,
          ElementID,
          -- * GTraversal
@@ -202,12 +204,13 @@ instance (StepType c, StepType p) => Logic (SideEffect c) (SideEffect p)
 unsafeGTraversal :: GScript -> GTraversal c s e
 unsafeGTraversal = GTraversal
 
-allVertices :: GTraversal Transform Void Vertex
+allVertices :: Vertex v => GTraversal Transform Void v
 allVertices = unsafeGTraversal $ gRaw "g.V()"
 
-vertexByID :: GScript
+vertexByID :: Vertex v
+           => GScript
               -- ^ Gremlin code for vertex ID.
-           -> GTraversal Transform Void Vertex
+           -> GTraversal Transform Void v
 vertexByID vid = unsafeGTraversal (gRaw "g" <> gMethodCall "V" [vid])
 
 infixl 5 @.
@@ -218,17 +221,26 @@ infixl 5 @.
 gt @. gs = unsafeGTraversal (toGScript gt <> toGScript gs)
 
 
--- | Vertex in a TinkerPop graph.
-data Vertex
-
--- | Edge in a TinkerPop graph.
-data Edge
-
 -- | Element interface in a TinkerPop graph.
 class Element e 
 
-instance Element Vertex
-instance Element Edge
+-- | Vertex interface in a TinkerPop graph.
+class Element v => Vertex v
+
+-- | Edge interface in a TinkerPop graph.
+class Element e => Edge e
+
+-- | General vertex type you can use for 'Vertex' class.
+data GVertex
+
+instance Element GVertex
+instance Vertex GVertex
+
+-- | General edge type you can use for 'Edge' class.
+data GEdge
+
+instance Element GEdge
+instance Edge GEdge
 
 -- | Value object in a TinkerPop graph.
 data PropertyValue
@@ -342,27 +354,31 @@ gValues :: Element s
         -> GStep Transform s PropertyValue
 gValues = unsafeGStep . gMethodCall "values"
 
-genericTraversalStep :: Text -> [GScript] -> GStep Transform Vertex e
+genericTraversalStep :: Vertex v => Text -> [GScript] -> GStep Transform v e
 genericTraversalStep method_name edge_labels =
   unsafeGStep (gMethodCall method_name edge_labels)
 
 -- | @.out@ step
-gOut :: [GScript] -- ^ edge labels
-     -> GStep Transform Vertex Vertex
+gOut :: (Vertex v1, Vertex v2)
+     => [GScript] -- ^ edge labels
+     -> GStep Transform v1 v2
 gOut = genericTraversalStep "out"
 
 -- | @.outE@ step
-gOutE :: [GScript] -- ^ edge labels
-      -> GStep Transform Vertex Edge
+gOutE :: (Vertex v, Edge e)
+      => [GScript] -- ^ edge labels
+      -> GStep Transform v e
 gOutE = genericTraversalStep "outE"
 
 -- | @.in@ step (@in@ is reserved by Haskell..)
-gIn :: [GScript] -- ^ edge labels
-    -> GStep Transform Vertex Vertex
+gIn :: (Vertex v1, Vertex v2)
+    => [GScript] -- ^ edge labels
+    -> GStep Transform v1 v2
 gIn = genericTraversalStep "in"
 
-gInE :: [GScript] -- ^ edge labels
-     -> GStep Transform Vertex Edge
+gInE :: (Vertex v, Edge e)
+     => [GScript] -- ^ edge labels
+     -> GStep Transform v e
 gInE = genericTraversalStep "inE"
 
 ---- -- probably we can implement .as() step like this. GBuilder generates
