@@ -31,7 +31,9 @@ module W5J.DB.TinkerPop.GStep
          -- * GTraversal
          (@.),
          allVertices,
+         allVertices',
          vertexByID,
+         vertexByID',
          unsafeGTraversal,
          -- * GStep
          unsafeGStep,
@@ -208,14 +210,22 @@ instance (StepType c, StepType p) => Logic (SideEffect c) (SideEffect p)
 unsafeGTraversal :: GScript -> GTraversal c s e
 unsafeGTraversal = GTraversal
 
-allVertices :: Vertex v => GTraversal Transform Void v
-allVertices = unsafeGTraversal $ gRaw "g.V()"
+-- | TinkerPop traversal to get all vertices.
+allVertices :: GTraversal Transform Void GVertex
+allVertices = allVertices'
 
-vertexByID :: Vertex v
-           => GScript
+-- | Polymorphic version of 'allVertices'.
+allVertices' :: Vertex v => GTraversal Transform Void v
+allVertices' = unsafeGTraversal $ gRaw "g.V()"
+
+vertexByID :: GScript
               -- ^ Gremlin code for vertex ID.
-           -> GTraversal Transform Void v
-vertexByID vid = unsafeGTraversal (gRaw "g" <> gMethodCall "V" [vid])
+           -> GTraversal Transform Void GVertex
+vertexByID = vertexByID'
+
+-- | Polymorphic version of 'vertexByID'.
+vertexByID' :: Vertex v => GScript -> GTraversal Transform Void v
+vertexByID' vid = unsafeGTraversal (gRaw "g" <> gMethodCall "V" [vid])
 
 infixl 5 @.
 

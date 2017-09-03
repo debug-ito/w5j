@@ -23,7 +23,7 @@ import W5J.DB.TinkerPop.GBuilder (GBuilder, newBind, GScript)
 import W5J.DB.TinkerPop.GScript (gRaw, gFunCall, gLiteral)
 import W5J.DB.TinkerPop.GStep
   ( (@.), toGScript, toGTraversal, liftType,
-    allVertices, gHasLabel', gHas, gHasId', gOrderBy,
+    allVertices', gHasLabel', gHas, gHasId', gOrderBy,
     unsafeGTraversal, gValues, gFilter, gOut, gOr,
     GTraversal, Transform, Vertex, Element
   )
@@ -76,7 +76,7 @@ buildQuery query = do
   start <- makeStart
   return $ (start @. liftType traversal)
   where
-    makeStart = return (allVertices @. gHasLabel' ["what"])
+    makeStart = return (allVertices' @. gHasLabel' ["what"])
     buildCond (QCondTerm t) = do
       vt <- newBind t
       -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
