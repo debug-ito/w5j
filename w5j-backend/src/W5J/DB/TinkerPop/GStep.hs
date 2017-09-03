@@ -157,14 +157,14 @@ class StepType t
 --
 -- > s1, s2 :: GStep Filter s s
 -- > gFilter s1 == s1
--- > gAnd [s1, s2] == s1 >>> s2
+-- > gAnd [s1, s2] == s1 >>> s2 == s2 >>> s1
 data Filter
 
 instance StepType Filter
 
 -- | StepType for steps that are not filtering steps and without
--- side-effects. This includes transformations, injections and graph
--- traversal actions.
+-- side-effects. This includes transformations, reordring, injections
+-- and graph traversal actions.
 data Transform
 
 instance StepType Transform
