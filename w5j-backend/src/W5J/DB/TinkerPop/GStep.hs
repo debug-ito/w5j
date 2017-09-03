@@ -72,6 +72,7 @@ import Prelude hiding (or, filter, not)
 import Control.Category (Category)
 -- (below) to import Category methods without conflict with Prelude
 import qualified Control.Category as Category
+import Data.Bifunctor (Bifunctor(bimap))
 import Data.Monoid ((<>), mconcat)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -102,6 +103,10 @@ instance StepType c => Category (GStep c) where
 instance Functor (GStep c s) where
   fmap _ = GStep . unGStep
 
+-- | Unsafely convert input and output types.
+instance Bifunctor (GStep c) where
+  bimap _ _ = GStep . unGStep
+
 -- | Call static method versions of the 'GStep' on @__@ class.
 instance ToGTraversal GStep where
   toGTraversal step = unsafeGTraversal (gRaw "__" <> toGScript step)
@@ -129,6 +134,10 @@ instance StepType c => Category (GTraversal c) where
 -- | Unsafely convert output type.
 instance Functor (GTraversal c s) where
   fmap _ = GTraversal . unGTraversal
+
+-- | Unsafely convert input and output types.
+instance Bifunctor (GTraversal c) where
+  bimap _ _ = GTraversal . unGTraversal
 
 -- | Something that is isomorphic to 'GScript'.
 class GScriptLike g where
