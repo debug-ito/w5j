@@ -163,6 +163,8 @@ def getCompleteWhat = globals["getCompleteWhat"] = { what_v ->
           __(what_v).out('where').toList()];
 };
 
+// TODO: coalesceステップの使い方、何かおかしいような。anonymous traversalじゃだめだろう。
+// よく考えたらfoldステップを使う必要があるんだな。この場合。
 def optionalT = globals["optionalT"] = { traversal ->
   return coalesce(traversal.map({ return Optional.of(it.get()); }), constant(Optional.empty()));
 };

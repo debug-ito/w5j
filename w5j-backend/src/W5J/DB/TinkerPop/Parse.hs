@@ -24,6 +24,10 @@ import Data.Aeson
   )
 import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
+import Data.Greskell
+  ( AesonVertex(..), AesonVertexProperty(..), lookupOneValue, lookupListValues,
+    GraphSON(gsonValue), PropertyMapList
+  )
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
@@ -39,57 +43,6 @@ import W5J.What (What(..))
 import W5J.When (When(..))
 import W5J.Where (Where(..))
 import W5J.DB.TinkerPop.Error (parseError)
-
--- | The atomic (vertex) property value
-newtype PropertyValue a = PropertyValue { unPropertyValue :: a }
-                        deriving (Show,Eq,Ord)
-
-instance FromJSON a => FromJSON (PropertyValue a) where
-  parseJSON (Object obj) = PropertyValue <$> (obj .: "value")
-  parseJSON _ = empty
-
--- | Property value of ONE cardinality
-newtype PropertyOne a = PropertyOne { unPropertyOne :: PropertyValue a }
-                      deriving (Show,Eq,Ord)
-
-instance FromJSON a => FromJSON (PropertyOne a) where
-  parseJSON v = do
-    values <- fmap unPropertyMany $ parseJSON v
-    case values of
-     [head_v] -> return $ PropertyOne head_v
-     _ -> empty
-
-propOne :: FromJSON a => Object -> Text -> Parser a
-propOne props name = unPropertyValue <$> unPropertyOne <$> (props .: name)
-
--- | Property value of LIST/SET cardinality
-newtype PropertyMany a = PropertyMany { unPropertyMany :: [PropertyValue a] }
-                       deriving (Show,Eq,Ord)
-
-instance FromJSON a => FromJSON (PropertyMany a) where
-  parseJSON (Array arr) = fmap PropertyMany $ mapM parseJSON $ toList arr
-  parseJSON _ = empty
-
-propMany :: FromJSON a => Object -> Text -> Parser [a]
-propMany props name =
-  fmap (map unPropertyValue . unPropertyMany) $ parseJSON $ maybe (Array mempty) id $ HM.lookup name props
-
-type VertexID = Integer
-type VertexLabel = Text
-
-parseVertex :: (VertexID -> VertexLabel -> Object -> Parser a)
-            -- ^ @id -> label -> properties -> Parser@
-            -> Value
-            -> Parser a
-parseVertex upperParser (Object obj) = do
-  vtype <- (obj .: "type") :: Parser Text
-  guard (vtype == "vertex")
-  vid <- obj .: "id"
-  label <- obj .: "label"
-  case HM.lookup "properties" obj of
-   Just (Object prop_obj) -> upperParser vid label prop_obj
-   _ -> empty
-parseVertex _ _ = empty
 
 
 -- | Aeson wrapper for complete 'What' data.
@@ -113,8 +66,12 @@ instance FromJSON ACompleteWhat where
                                     whatWheres = wheres
                                   }
   parseJSON _ = empty
-    
 
+parseVPOne :: FromJSON v => AesonVertex -> Text -> Parser v
+parseVPOne av key = (parseJSON . gsonValue) =<< (maybe empty pure $ lookupOneValue key $ avProperties av)
+
+parseVPList :: FromJSON v => AesonVertex -> Text -> Parser [v]
+parseVPList av key = mapM parseJSON $ map gsonValue $ lookupListValues key $ avProperties av
 
 -- | Aeson wrapper of 'What' vertex.
 newtype AVertexWhat = AVertexWhat { unAVertexWhat :: AWhat }
@@ -122,16 +79,17 @@ newtype AVertexWhat = AVertexWhat { unAVertexWhat :: AWhat }
 -- | Parse a TinkerPop vertex object into 'What'. Since the input is
 -- only one vertex, 'whatWhen' and 'whatWheres' are empty.
 instance FromJSON AVertexWhat where
-  parseJSON = parseVertex f
+  parseJSON v = fromAesonVertex =<< parseJSON v
     where
-      f vid vlabel obj = do
-        let p1 :: FromJSON a => Text -> Parser a
-            p1 = propOne obj
-            ps = propMany obj
-        guard (vlabel == "what")
+      fromAesonVertex av = do
+        guard (avLabel av == "what")
+        let p1 :: FromJSON v => Text -> Parser v
+            p1 = parseVPOne av
+            ps = parseVPList av
         fmap AVertexWhat
-          $ AWhat vid
-          <$> p1 "title"
+          $ AWhat
+          <$> (parseJSON $ gsonValue $ avId av)
+          <*> p1 "title"
           <*> pure Nothing
           <*> pure []
           <*> p1 "body"
@@ -144,26 +102,27 @@ instance FromJSON AVertexWhat where
 newtype AVertexWhen = AVertexWhen { unAVertexWhen :: AWhen }
 
 instance FromJSON AVertexWhen where
-  parseJSON = parseVertex f
+  parseJSON v = fromAesonVertex =<< parseJSON v
     where
-      f _ vlabel obj = do
-        guard (vlabel == "when")
+      fromAesonVertex av = do
+        guard (avLabel av == "when")
         fmap AVertexWhen $ AWhen
-          <$> propOne obj "instant"
-          <*> propOne obj "is_time_explicit"
-          <*> propOne obj "time_zone"
+          <$> parseVPOne av "instant"
+          <*> parseVPOne av "is_time_explicit"
+          <*> parseVPOne av "time_zone"
 
 -- | Aeson wrapper of 'Where' vertex.
 newtype AVertexWhere = AVertexWhere { unAVertexWhere :: AWhere }
 
 instance FromJSON AVertexWhere where
-  parseJSON = parseVertex f
+  parseJSON v = fromAesonVertex =<< parseJSON v
     where
-      f vid vlabel obj = do
-        guard (vlabel == "where")
+      fromAesonVertex av = do
+        guard (avLabel av == "where")
         fmap (AVertexWhere . AWhere)
-          $ Where (Just vid)
-          <$> propOne obj "name"
+          $ Where
+          <$> (fmap Just $ parseJSON $ gsonValue $ avId av)
+          <*> parseVPOne av "name"
 
 
 ioFromJSON :: FromJSON a => Value -> IO a

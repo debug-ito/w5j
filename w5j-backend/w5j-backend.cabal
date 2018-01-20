@@ -26,9 +26,6 @@ library
                         W5J.Interval,
                         W5J.Time,
                         W5J.Aeson,
-                        W5J.DB.TinkerPop.GScript,
-                        W5J.DB.TinkerPop.GBuilder,
-                        W5J.DB.TinkerPop.GStep,
                         W5J.DB.TinkerPop.IO.Connection,
                         W5J.DB.TinkerPop.IO.What,
                         W5J.DB.TinkerPop.IO.Misc,
@@ -45,7 +42,8 @@ library
                         gremlin-haskell,
                         unordered-containers,
                         aeson,
-                        transformers
+                        transformers,
+                        greskell
 
 executable w5j-backend
   default-language:     Haskell2010
@@ -68,8 +66,6 @@ test-suite spec
   other-modules:        W5J.TimeSpec,
                         W5J.AesonSpec,
                         W5J.DB.TinkerPop.IO.WhatSpec,
-                        W5J.DB.TinkerPop.GScriptSpec,
-                        W5J.DB.TinkerPop.GStepSpec,
                         W5J.DB.TinkerPop.TestUtil
   build-depends:        base, w5j-backend, aeson, text,
                         hspec,

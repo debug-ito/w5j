@@ -16,16 +16,18 @@ module W5J.DB.TinkerPop.IO.What
 import Control.Monad (mapM)
 import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>))
+import Data.Greskell
+  ( newBind,
+    unsafeFunCall, unsafeWalk, unsafeMethodCall,
+    toGremlin,
+    Walk, Transform,
+    vertices, source, ($.),
+    gHasLabel, pEq, toGreskell
+  )
 
 import W5J.Aeson (toAWhat)
 import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
-import W5J.DB.TinkerPop.GBuilder (newBind, submitGBuilder)
-import W5J.DB.TinkerPop.GScript (gFunCall, gMethodCall, gRaw)
-import W5J.DB.TinkerPop.GStep
-  ( vertexByID', (@.), gHasLabel', unsafeGStep, GStep, toGScript,
-  )
-import qualified W5J.DB.TinkerPop.GStep as GStep
-import W5J.DB.TinkerPop.IO.Connection (Connection)
+import W5J.DB.TinkerPop.IO.Connection (Connection, submitBinder)
 import W5J.DB.TinkerPop.Parse (ioFromJSON, unACompleteWhat)
 import qualified W5J.DB.TinkerPop.Query.What as QueryWhat
 import W5J.Time (currentTime, toEpochMsec)
@@ -52,14 +54,15 @@ addWhat :: Connection
         -> IO (WhatID)
 addWhat conn what = do
   cur_time <- currentTime
-  parseResult =<< toGremlinError =<< (submitGBuilder conn $ getGBuilder $ setCurrentTime cur_time what)
+  parseResult =<< toGremlinError =<< (submitBinder conn $ getBinder $ setCurrentTime cur_time what)
   where
     setCurrentTime t w = w { whatCreatedAt = t,
                              whatUpdatedAt = t
                            }
-    getGBuilder w = do
+    getBinder w = do
       p <- newBind $ toAWhat w
-      return  (gFunCall "addWhat" [p] <> gMethodCall "id" [])
+      let add_result = unsafeFunCall "addWhat" [toGremlin p]
+      return $ unsafeMethodCall add_result "id" []
     parseResult [] = parseError "No element in the result."
     parseResult (ret : _) = ioFromJSON ret
     
@@ -72,30 +75,32 @@ updateWhat :: Connection
 updateWhat = undefined
 -- TODO. We can just delete and re-create When vertices.
 
-completeWhatStep :: GStep GStep.Transform QueryWhat.WhatVertex ()
-completeWhatStep = unsafeGStep $ gMethodCall "map" [block]
-  where
-    block = gRaw "{ getCompleteWhat(it.get()) }"
+
+data TempCompWhat -- TODO: 一時的な型。ACompleteWhatにすべきか。
+
+completeWhatStep :: Walk Transform QueryWhat.WhatVertex TempCompWhat
+completeWhatStep = unsafeWalk "map" ["{ getCompleteWhat(it.get()) }"]
 
 -- | Get 'What' vertex with the given 'WhatID'.
 getWhatById :: Connection -> WhatID -> IO (Maybe What)
 getWhatById conn wid = do
-  mgot_val <- fmap (listToMaybe) $ toGremlinError =<< submitGBuilder conn gbuilder
+  mgot_val <- fmap (listToMaybe) $ toGremlinError =<< submitBinder conn binder
   case mgot_val of
    Nothing -> return Nothing
    Just got_val -> fmap (Just . unACompleteWhat) $ ioFromJSON got_val
   where
-    gbuilder = do
+    binder = do
       v_wid <- newBind wid
-      return $ toGScript (vertexByID' v_wid @. (gHasLabel' ["what"]) @. completeWhatStep)
+      return $ toGreskell $ completeWhatStep $. gHasLabel (pEq "what") $. vertices [v_wid] $ source "g"
+
 
 queryWhat :: Connection -> QueryWhat.QueryWhat -> IO [What]
 queryWhat conn query =
-  fmap (map unACompleteWhat) $ mapM ioFromJSON =<< toGremlinError =<< submitGBuilder conn gbuilder
+  fmap (map unACompleteWhat) $ mapM ioFromJSON =<< toGremlinError =<< submitBinder conn binder
   where
-    gbuilder = do
+    binder = do
       query_gremlin <- QueryWhat.buildQuery query
-      return $ toGScript (query_gremlin @. completeWhatStep)
+      return $ toGreskell $ completeWhatStep $. query_gremlin
 
 -- | Delete a 'What' vertex.
 deleteWhat :: Connection -> WhatID -> IO ()

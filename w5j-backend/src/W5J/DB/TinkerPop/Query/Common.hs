@@ -21,13 +21,15 @@ module W5J.DB.TinkerPop.Query.Common
          orderComparator
        ) where
 
+import Data.Greskell
+  ( Greskell, Order, Binder, Walk, Filter, Transform,
+    oIncr, oDecr, gRange, gOr, gNot, gIdentity, liftWalk,
+    newBind
+  )
 import Data.Monoid ((<>))
 import Control.Category ((>>>))
 
 import W5J.Interval (Interval, sup, inf, (...))
-import W5J.DB.TinkerPop.GBuilder (GBuilder, newBind)
-import W5J.DB.TinkerPop.GScript (GScript, gRaw)
-import W5J.DB.TinkerPop.GStep (GStep, Filter, Transform, gRange, gOr, gNot, gIdentity, liftType)
 
 -- | Range of elements indices to query. Min is inclusive, max is
 -- exclusive. Starting from 0.
@@ -61,9 +63,9 @@ data QOrder = QOrderAsc | QOrderDesc
             deriving (Show,Eq,Ord,Enum,Bounded)
 
 -- | Predefined Gremlin comparator for QOrder
-orderComparator :: QOrder -> GScript
-orderComparator QOrderAsc = gRaw "incr"
-orderComparator QOrderDesc = gRaw "decr"
+orderComparator :: QOrder -> Greskell (Order a)
+orderComparator QOrderAsc = oIncr
+orderComparator QOrderDesc = oDecr
 
 
 -- | Generic query object. type @c@ is target-specific query condition
@@ -77,20 +79,20 @@ data Query c b =
   deriving (Show,Eq,Ord)
 
 
--- | Generate a filtering 'GStep' (i.e. a method call chain) from the
+-- | Generate a filtering 'Walk' (i.e. a method call chain) from the
 -- 'Query'.
-buildQueryWith :: (c -> GBuilder (GStep Filter s s))
+buildQueryWith :: (c -> Binder (Walk Filter s s))
                -- ^ generate Gremlin step for the leaf condition @c@.
-               -> (QOrder -> b -> GBuilder (GStep Transform s s))
+               -> (QOrder -> b -> Binder (Walk Transform s s))
                -- ^ generate Gremlin @.order@ and @.by@ step(s) for
                -- ordering.
                -> Query c b
-               -> GBuilder (GStep Transform s s)
+               -> Binder (Walk Transform s s)
 buildQueryWith buildCond buildOBy query = do
   gremlin_cond <- buildCondTree $ queryCond query
   gremlin_orderby <- buildOBy (queryOrder query) (queryOrderBy query)
   gremlin_range <- buildRange $ queryRange query
-  return (liftType gremlin_cond >>> gremlin_orderby >>> gremlin_range)
+  return (liftWalk gremlin_cond >>> gremlin_orderby >>> gremlin_range)
   where
     buildRange range = do
       v_min <- newBind $ qRangeMin range
