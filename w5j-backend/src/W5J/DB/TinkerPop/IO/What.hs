@@ -22,7 +22,7 @@ import Data.Greskell
     toGremlin,
     Walk, Transform,
     vertices, source, ($.),
-    gHasLabel, pEq, toGreskell
+    gHasLabel, toGreskell
   )
 
 import W5J.Aeson (toAWhat)
@@ -91,7 +91,7 @@ getWhatById conn wid = do
   where
     binder = do
       v_wid <- newBind wid
-      return $ toGreskell $ completeWhatStep $. gHasLabel (pEq "what") $. vertices [v_wid] $ source "g"
+      return $ toGreskell $ completeWhatStep $. gHasLabel "what" $. vertices [v_wid] $ source "g"
 
 
 queryWhat :: Connection -> QueryWhat.QueryWhat -> IO [What]

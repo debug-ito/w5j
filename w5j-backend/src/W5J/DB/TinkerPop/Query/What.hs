@@ -22,7 +22,7 @@ import Data.Greskell
     source, vertices,
     newBind,
     unsafeFunCall, toGremlin, unsafeGreskell,
-    gOr, gHas2, gHas2', pEq, gFilter, gOut', gHasId, gOrderBy, gHasLabel,
+    gOr, gHas2, gHas2P', pEq, gFilter, gOut', gHasId, gOrderBy, gHasLabel,
     ByComparator(..), pjTraversal,
     Element(..), Vertex, AesonVertexProperty
   )
@@ -93,7 +93,7 @@ instance Vertex WhatVertex
 buildQuery :: QueryWhat -> Binder (GTraversal Transform Void WhatVertex)
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
-  return $ liftWalk traversal $. gHasLabel (pEq "what") $. vertices [] $ source "g"
+  return $ liftWalk traversal $. gHasLabel "what" $. vertices [] $ source "g"
   where
     -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
     pTextContains :: Greskell Text -> Greskell (P Text)
@@ -101,16 +101,16 @@ buildQuery query = do
     buildCond (QCondTerm t) = do
       vt <- newBind t
       return $ gOr
-        [ gHas2' "title" (pTextContains vt),
-          gHas2' "body"  (pTextContains vt),
-          gHas2' "tags"  (pEq vt)
+        [ gHas2P' "title" (pTextContains vt),
+          gHas2P' "body"  (pTextContains vt),
+          gHas2P' "tags"  (pEq vt)
         ]
     buildCond (QCondTag t) = do
       vt <- newBind t
-      return $ gHas2 "tags" (pEq vt)
+      return $ gHas2 "tags" vt
     buildCond (QCondWhereID where_id) = do -- TODO: こいつのテストから。いろいろあったけどようやく再開かな？ ていうか、まずgreskellをある程度モノにしよう。
       vid <- newBind where_id
-      return $ gFilter (gOut' ["where"] >>> gHasId (pEq (fmap toJSON $ vid)))
+      return $ gFilter (gOut' ["where"] >>> gHasId (fmap toJSON vid))
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhenExists) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
