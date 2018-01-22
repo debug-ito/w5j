@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 -- |
 -- Module: W5J.DB.TinkerPop.Parse
 -- Description: parsers for responses from Gremlin Server
@@ -26,7 +26,8 @@ import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
 import Data.Greskell
   ( AesonVertex(..), AesonVertexProperty(..), lookupOneValue, lookupListValues,
-    GraphSON(gsonValue), PropertyMapList
+    GraphSON(gsonValue), PropertyMapList,
+    Element(..), Vertex
   )
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
@@ -35,11 +36,11 @@ import Data.Monoid (mempty)
 import Data.Text (Text)
 
 import W5J.Aeson
-  ( AWhat(AWhat), AWhen(AWhen), AWhere(AWhere),
+  ( AWhat(AWhat,_what_id), AWhen(AWhen), AWhere(AWhere),
     fromAWhat, fromAWhen, fromAWhere
   )
 import W5J.Interval ((...))
-import W5J.What (What(..))
+import W5J.What (What(..), WhatID)
 import W5J.When (When(..))
 import W5J.Where (Where(..))
 import W5J.DB.TinkerPop.Error (parseError)
@@ -96,7 +97,14 @@ instance FromJSON AVertexWhat where
           <*> ps "tags"
           <*> p1 "created_at"
           <*> p1 "updated_at"
-        
+
+instance Element AVertexWhat where
+  type ElementID AVertexWhat = WhatID
+  type ElementProperty AVertexWhat = AesonVertexProperty
+  elementId (AVertexWhat w) = _what_id w
+  elementLabel _ = "what"
+
+instance Vertex AVertexWhat
 
 -- | Aeson wrapper of 'When' vertex.
 newtype AVertexWhen = AVertexWhen { unAVertexWhen :: AWhen }
