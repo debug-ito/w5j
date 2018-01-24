@@ -25,7 +25,7 @@ import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
 import Data.Greskell
-  ( AesonVertex(..), AesonVertexProperty(..), lookupOneValue, lookupListValues,
+  ( AVertex(..), AVertexProperty(..), lookupOneValue, lookupListValues,
     GraphSON(gsonValue), PropertyMapList,
     Element(..), Vertex
   )
@@ -42,7 +42,7 @@ import W5J.Aeson
 import W5J.Interval ((...))
 import W5J.What (What(..), WhatID)
 import W5J.When (When(..))
-import W5J.Where (Where(..))
+import W5J.Where (Where(..), WhereID)
 import W5J.DB.TinkerPop.Error (parseError)
 
 
@@ -68,10 +68,10 @@ instance FromJSON ACompleteWhat where
                                   }
   parseJSON _ = empty
 
-parseVPOne :: FromJSON v => AesonVertex -> Text -> Parser v
+parseVPOne :: FromJSON v => AVertex -> Text -> Parser v
 parseVPOne av key = (parseJSON . gsonValue) =<< (maybe empty pure $ lookupOneValue key $ avProperties av)
 
-parseVPList :: FromJSON v => AesonVertex -> Text -> Parser [v]
+parseVPList :: FromJSON v => AVertex -> Text -> Parser [v]
 parseVPList av key = mapM parseJSON $ map gsonValue $ lookupListValues key $ avProperties av
 
 -- | Aeson wrapper of 'What' vertex.
@@ -80,9 +80,9 @@ newtype AVertexWhat = AVertexWhat { unAVertexWhat :: AWhat }
 -- | Parse a TinkerPop vertex object into 'What'. Since the input is
 -- only one vertex, 'whatWhen' and 'whatWheres' are empty.
 instance FromJSON AVertexWhat where
-  parseJSON v = fromAesonVertex =<< parseJSON v
+  parseJSON v = fromAVertex =<< parseJSON v
     where
-      fromAesonVertex av = do
+      fromAVertex av = do
         guard (avLabel av == "what")
         let p1 :: FromJSON v => Text -> Parser v
             p1 = parseVPOne av
@@ -100,19 +100,23 @@ instance FromJSON AVertexWhat where
 
 instance Element AVertexWhat where
   type ElementID AVertexWhat = WhatID
-  type ElementProperty AVertexWhat = AesonVertexProperty
-  elementId (AVertexWhat w) = _what_id w
-  elementLabel _ = "what"
+  type ElementProperty AVertexWhat = AVertexProperty
 
 instance Vertex AVertexWhat
 
 -- | Aeson wrapper of 'When' vertex.
 newtype AVertexWhen = AVertexWhen { unAVertexWhen :: AWhen }
 
+instance Element AVertexWhen where
+  type ElementID AVertexWhen = Value
+  type ElementProperty AVertexWhen = AVertexProperty
+
+instance Vertex AVertexWhen
+
 instance FromJSON AVertexWhen where
-  parseJSON v = fromAesonVertex =<< parseJSON v
+  parseJSON v = fromAVertex =<< parseJSON v
     where
-      fromAesonVertex av = do
+      fromAVertex av = do
         guard (avLabel av == "when")
         fmap AVertexWhen $ AWhen
           <$> parseVPOne av "instant"
@@ -122,10 +126,16 @@ instance FromJSON AVertexWhen where
 -- | Aeson wrapper of 'Where' vertex.
 newtype AVertexWhere = AVertexWhere { unAVertexWhere :: AWhere }
 
+instance Element AVertexWhere where
+  type ElementID AVertexWhere = WhereID
+  type ElementProperty AVertexWhere = AVertexProperty
+
+instance Vertex AVertexWhere
+
 instance FromJSON AVertexWhere where
-  parseJSON v = fromAesonVertex =<< parseJSON v
+  parseJSON v = fromAVertex =<< parseJSON v
     where
-      fromAesonVertex av = do
+      fromAVertex av = do
         guard (avLabel av == "where")
         fmap (AVertexWhere . AWhere)
           $ Where
