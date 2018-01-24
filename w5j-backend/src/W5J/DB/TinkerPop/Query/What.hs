@@ -24,7 +24,7 @@ import Data.Greskell
     unsafeFunCall, toGremlin, unsafeGreskell,
     gOr, gHas2, gHas2P', pEq, gFilter, gOut', gHasId, gOrderBy, gHasLabel,
     ByComparator(..), pjTraversal,
-    Element(..), Vertex, AesonVertexProperty
+    Element(..), Vertex, AVertexProperty
   )
 import Data.Monoid ((<>))
 import Data.Text (Text)
@@ -86,7 +86,7 @@ data WhatVertex
 -- つか、ParseモジュールのAVertexWhatを使えばいい。
 instance Element WhatVertex where
   type ElementID WhatVertex = WhatID
-  type ElementProperty WhatVertex = AesonVertexProperty
+  type ElementProperty WhatVertex = AVertexProperty
 
 instance Vertex WhatVertex
 
