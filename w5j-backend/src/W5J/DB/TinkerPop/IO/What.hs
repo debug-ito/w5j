@@ -28,8 +28,8 @@ import Data.Greskell
 import W5J.Aeson (toAWhat)
 import W5J.DB.TinkerPop.Error (toGremlinError, parseError)
 import W5J.DB.TinkerPop.IO.Connection (Connection, submitBinder)
-import W5J.DB.TinkerPop.Parse (ioFromJSON, unACompleteWhat)
-import qualified W5J.DB.TinkerPop.Query.What as QueryWhat
+import W5J.DB.TinkerPop.Parse (ioFromJSON, unACompleteWhat, ACompleteWhat, AVertexWhat)
+import W5J.DB.TinkerPop.Query.What (QueryWhat, buildQuery)
 import W5J.Time (currentTime, toEpochMsec)
 import W5J.What (What(..), WhatID)
 import W5J.When (When(..))
@@ -76,9 +76,7 @@ updateWhat = undefined
 -- TODO. We can just delete and re-create When vertices.
 
 
-data TempCompWhat -- TODO: 一時的な型。ACompleteWhatにすべきか。
-
-completeWhatStep :: Walk Transform QueryWhat.WhatVertex TempCompWhat
+completeWhatStep :: Walk Transform AVertexWhat ACompleteWhat
 completeWhatStep = unsafeWalk "map" ["{ getCompleteWhat(it.get()) }"]
 
 -- | Get 'What' vertex with the given 'WhatID'.
@@ -94,12 +92,12 @@ getWhatById conn wid = do
       return $ toGreskell $ completeWhatStep $. gHasLabel "what" $. vertices [v_wid] $ source "g"
 
 
-queryWhat :: Connection -> QueryWhat.QueryWhat -> IO [What]
+queryWhat :: Connection -> QueryWhat -> IO [What]
 queryWhat conn query =
   fmap (map unACompleteWhat) $ mapM ioFromJSON =<< toGremlinError =<< submitBinder conn binder
   where
     binder = do
-      query_gremlin <- QueryWhat.buildQuery query
+      query_gremlin <- buildQuery query
       return $ toGreskell $ completeWhatStep $. query_gremlin
 
 -- | Delete a 'What' vertex.

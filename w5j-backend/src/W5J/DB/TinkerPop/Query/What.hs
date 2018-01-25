@@ -9,20 +9,19 @@ module W5J.DB.TinkerPop.Query.What
        ( QueryWhat,
          buildQuery,
          QOrderBy(..),
-         QCond(..),
-         WhatVertex
+         QCond(..)
        ) where
 
 import Control.Category ((>>>))
 import Control.Monad (void)
 import Data.Aeson (toJSON)
 import Data.Greskell
-  ( Binder, GTraversal, Transform, Greskell, P,
+  ( Binder, GTraversal, Transform, Greskell, P, Walk,
     ($.), liftWalk,
     source, vertices,
     newBind,
     unsafeFunCall, toGremlin, unsafeGreskell,
-    gOr, gHas2, gHas2P', pEq, gFilter, gOut', gHasId, gOrderBy, gHasLabel,
+    gOr, gHas2, gHas2P', pEq, gFilter, gOut, gHasId, gOrderBy, gHasLabel,
     ByComparator(..), pjTraversal,
     Element(..), Vertex, AVertexProperty
   )
@@ -30,14 +29,7 @@ import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Void (Void)
 
--- import W5J.DB.TinkerPop.GBuilder (GBuilder, newBind, GScript)
--- import W5J.DB.TinkerPop.GScript (gRaw, gFunCall, gLiteral)
--- import W5J.DB.TinkerPop.GStep
---   ( (@.), toGScript, toGTraversal, liftType,
---     allVertices', gHasLabel', gHas, gHasId', gOrderBy,
---     unsafeGTraversal, gValues, gFilter, gOut, gOr,
---     GTraversal, Transform, Vertex, Element
---   )
+import W5J.DB.TinkerPop.Parse (AVertexWhat, AVertexWhere)
 import W5J.DB.TinkerPop.Query.Common
   ( Query, QOrder(..),
     buildQueryWith, orderComparator
@@ -79,18 +71,8 @@ data QCond = QCondTerm Text
              -- 'When'. This implies the 'whatWhen' is not 'Nothing'.
            deriving (Show,Eq,Ord)
 
--- | A 'Vertex' for \"what\" data.
-data WhatVertex
 
--- TODO: elementIdとかelementLabelとかを実装できるよう、WhatVertexを具体型にしたほうがいい。
--- つか、ParseモジュールのAVertexWhatを使えばいい。
-instance Element WhatVertex where
-  type ElementID WhatVertex = WhatID
-  type ElementProperty WhatVertex = AVertexProperty
-
-instance Vertex WhatVertex
-
-buildQuery :: QueryWhat -> Binder (GTraversal Transform Void WhatVertex)
+buildQuery :: QueryWhat -> Binder (GTraversal Transform Void AVertexWhat)
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   return $ liftWalk traversal $. gHasLabel "what" $. vertices [] $ source "g"
@@ -98,6 +80,8 @@ buildQuery query = do
     -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
     pTextContains :: Greskell Text -> Greskell (P Text)
     pTextContains t = unsafeFunCall "textContains" [toGremlin t]
+    walkToWhere :: Walk Transform AVertexWhat AVertexWhere
+    walkToWhere = gOut ["where"]
     buildCond (QCondTerm t) = do
       vt <- newBind t
       return $ gOr
@@ -110,7 +94,7 @@ buildQuery query = do
       return $ gHas2 "tags" vt
     buildCond (QCondWhereID where_id) = do -- TODO: こいつのテストから。いろいろあったけどようやく再開かな？ ていうか、まずgreskellをある程度モノにしよう。
       vid <- newBind where_id
-      return $ gFilter (gOut' ["where"] >>> gHasId (fmap toJSON vid))
+      return $ gFilter (walkToWhere >>> gHasId vid)
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhenExists) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
