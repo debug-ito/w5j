@@ -20,16 +20,17 @@ import Data.Greskell
     ($.), liftWalk,
     source, vertices,
     newBind,
-    unsafeFunCall, toGremlin, unsafeGreskell,
-    gOr, gHas2, gHas2P', pEq, gFilter, gOut, gHasId, gOrderBy, gHasLabel,
-    ByComparator(..), pjTraversal,
-    Element(..), Vertex, AVertexProperty
+    unsafeFunCall, toGremlin, unsafeGreskell, unsafeGTraversal,
+    gOr, gHas2, gHas2P', pEq, gFilter, gOut, gHasId, gOrderBy, gHasLabel, gValues,
+    ByComparator(..), pjTraversal, Order,
+    Element(..), Vertex, AVertexProperty,
+    string
   )
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Void (Void)
 
-import W5J.DB.TinkerPop.Parse (AVertexWhat, AVertexWhere)
+import W5J.DB.TinkerPop.Parse (AVertexWhat, AVertexWhere, AVertexWhen)
 import W5J.DB.TinkerPop.Query.Common
   ( Query, QOrder(..),
     buildQueryWith, orderComparator
@@ -98,15 +99,16 @@ buildQuery query = do
     buildCond (QCondWhereName _) = undefined -- TODO
     buildCond (QCondWhenExists) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
-    buildOrder order QOrderByWhen = undefined
-    -- -- TODO: optionalTじゃなくてfold使うんじゃないか？
-    --   return $ gOrderBy [byWhen "when_from", byWhen "when_to", commonBy]
-    --   where
-    --     byWhen edge_label =
-    --       (unsafeGTraversal (gFunCall "optionalT" [gFunCall "out" [gLiteral edge_label]]), comparator)
-    --     comparator = case order of
-    --       QOrderAsc -> unsafeGreskell "compareOptWhenVertices"
-    --       QOrderDesc -> unsafeGreskell "compareOptWhenVertices.reversed()"
-    --     commonBy =
-    --       (toGTraversal $ void $ gValues ["updated_at"], orderComparator order)
+    buildOrder order QOrderByWhen =
+      return $ gOrderBy [byWhen "when_from", byWhen "when_to", commonBy]
+      where
+        byWhen edge_label = ByComp (pjTraversal $ getOptWhen edge_label) comparator
+        getOptWhen edge_label =
+          unsafeGTraversal ("__.out(" <> (toGremlin $ string edge_label) <> ").fold().map { listToOptional(it.get()) }")
+        comparator :: Greskell (Order (Maybe AVertexWhen)) -- TODO: これ、正確にはOrderじゃないんだよな。
+        comparator = case order of
+          QOrderAsc -> unsafeGreskell "compareOptWhenVertices"
+          QOrderDesc -> unsafeGreskell "compareOptWhenVertices.reversed()"
+        commonBy =
+          ByComp (pjTraversal $ gValues ["updated_at"]) (orderComparator order)
       
