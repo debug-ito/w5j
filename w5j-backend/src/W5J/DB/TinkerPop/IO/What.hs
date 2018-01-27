@@ -18,7 +18,7 @@ import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>))
 import Data.Greskell
   ( newBind,
-    unsafeFunCall, unsafeWalk, unsafeMethodCall,
+    unsafeWalk, unsafeGreskell,
     toGremlin,
     Walk, Transform,
     vertices, source, ($.),
@@ -61,8 +61,7 @@ addWhat conn what = do
                            }
     getBinder w = do
       p <- newBind $ toAWhat w
-      let add_result = unsafeFunCall "addWhat" [toGremlin p]
-      return $ unsafeMethodCall add_result "id" []
+      return $ unsafeGreskell ("addWhat(" <> toGremlin p <> ").id()")
     parseResult [] = parseError "No element in the result."
     parseResult (ret : _) = ioFromJSON ret
     
