@@ -22,7 +22,7 @@ import Data.Greskell
     newBind,
     unsafeFunCall, toGremlin, unsafeGreskell, unsafeWalk,
     gOr, gHas2, gHas2P', pEq, gFilter, gOut, gHasId, gOrderBy, gHasLabel, gValues, gFold,
-    ByComparator(..), pjTraversal, Order,
+    ByComparator(..), pjTraversal, Order, ComparatorA, Comparator(cReversed),
     Element(..), Vertex, AVertexProperty,
     string,
     ComparatorA
@@ -107,8 +107,10 @@ buildQuery query = do
         getOptWhen edge_label = gOut [edge_label] >>> gFold >>> listToOptionalWalk
         comparator :: Greskell (ComparatorA (Maybe AVertexWhen))
         comparator = case order of
-          QOrderAsc -> unsafeGreskell "compareOptWhenVertices"
-          QOrderDesc -> unsafeGreskell "compareOptWhenVertices.reversed()"
+          QOrderAsc -> compareOptWhenVertices
+          QOrderDesc -> cReversed compareOptWhenVertices
+        compareOptWhenVertices :: Greskell (ComparatorA (Maybe AVertexWhen))
+        compareOptWhenVertices = unsafeGreskell "compareOptWhenVertices"
         commonBy =
           ByComp (pjTraversal $ gValues ["updated_at"]) (orderComparator order)
         listToOptionalWalk :: Walk Transform [a] (Maybe a)
