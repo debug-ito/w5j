@@ -20,11 +20,12 @@ import Data.Greskell
     ($.), liftWalk,
     source, vertices,
     newBind,
-    unsafeFunCall, toGremlin, unsafeGreskell, unsafeGTraversal,
-    gOr, gHas2, gHas2P', pEq, gFilter, gOut, gHasId, gOrderBy, gHasLabel, gValues,
+    unsafeFunCall, toGremlin, unsafeGreskell, unsafeWalk,
+    gOr, gHas2, gHas2P', pEq, gFilter, gOut, gHasId, gOrderBy, gHasLabel, gValues, gFold,
     ByComparator(..), pjTraversal, Order,
     Element(..), Vertex, AVertexProperty,
-    string
+    string,
+    ComparatorA
   )
 import Data.Monoid ((<>))
 import Data.Text (Text)
@@ -103,12 +104,13 @@ buildQuery query = do
       return $ gOrderBy [byWhen "when_from", byWhen "when_to", commonBy]
       where
         byWhen edge_label = ByComp (pjTraversal $ getOptWhen edge_label) comparator
-        getOptWhen edge_label =
-          unsafeGTraversal ("__.out(" <> (toGremlin $ string edge_label) <> ").fold().map { listToOptional(it.get()) }")
-        comparator :: Greskell (Order (Maybe AVertexWhen)) -- TODO: これ、正確にはOrderじゃないんだよな。
+        getOptWhen edge_label = gOut [edge_label] >>> gFold >>> listToOptionalWalk
+        comparator :: Greskell (ComparatorA (Maybe AVertexWhen))
         comparator = case order of
           QOrderAsc -> unsafeGreskell "compareOptWhenVertices"
           QOrderDesc -> unsafeGreskell "compareOptWhenVertices.reversed()"
         commonBy =
           ByComp (pjTraversal $ gValues ["updated_at"]) (orderComparator order)
+        listToOptionalWalk :: Walk Transform [a] (Maybe a)
+        listToOptionalWalk = unsafeWalk "map" ["{ listToOptional(it.get()) }"]
       
