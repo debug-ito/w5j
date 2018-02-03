@@ -18,7 +18,7 @@ import Data.Aeson (toJSON)
 import Data.Greskell
   ( Binder, GTraversal, Transform, Greskell, P, Walk,
     ($.), liftWalk,
-    source, vertices,
+    source, sV,
     newBind,
     unsafeFunCall, toGremlin, unsafeGreskell, unsafeWalk,
     gOr, gHas2, gHas2P', pEq, gFilter, gOut, gHasId, gOrderBy, gHasLabel, gValues, gFold,
@@ -77,7 +77,7 @@ data QCond = QCondTerm Text
 buildQuery :: QueryWhat -> Binder (GTraversal Transform Void AVertexWhat)
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
-  return $ liftWalk traversal $. gHasLabel "what" $. vertices [] $ source "g"
+  return $ liftWalk traversal $. gHasLabel "what" $. sV [] $ source "g"
   where
     -- For textContains predicate, see http://s3.thinkaurelius.com/docs/titan/1.0.0/index-parameters.html
     pTextContains :: Greskell Text -> Greskell (P Text)

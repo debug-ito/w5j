@@ -21,7 +21,7 @@ import Data.Greskell
     unsafeWalk, unsafeGreskell,
     toGremlin,
     Walk, Transform,
-    vertices, source, ($.),
+    sV, source, ($.),
     gHasLabel, toGreskell
   )
 
@@ -88,7 +88,7 @@ getWhatById conn wid = do
   where
     binder = do
       v_wid <- newBind wid
-      return $ toGreskell $ completeWhatStep $. gHasLabel "what" $. vertices [v_wid] $ source "g"
+      return $ toGreskell $ completeWhatStep $. gHasLabel "what" $. sV [v_wid] $ source "g"
 
 
 queryWhat :: Connection -> QueryWhat -> IO [What]
