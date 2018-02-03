@@ -15,7 +15,10 @@ module W5J.DB.TinkerPop.IO.Connection
 
 import Data.Aeson (Value)
 import qualified Data.HashMap.Strict as HM
-import Data.Greskell (Binder, Greskell, runBinder, Binding, toGremlin)
+import Data.Greskell
+  ( Binder, Greskell, runBinder, Binding, toGremlin,
+    ToGreskell(..)
+  )
 
 import Database.TinkerPop.Types (Connection, Gremlin)
 import qualified Database.TinkerPop as TP
@@ -33,7 +36,7 @@ withConnection = TP.run
 submit :: Connection -> Gremlin -> Maybe Binding -> IO (Either String [Value])
 submit = TP.submit
 
-submitBinder :: Connection -> Binder (Greskell a) -> IO (Either String [Value])
+submitBinder :: ToGreskell g => Connection -> Binder g -> IO (Either String [Value])
 submitBinder conn binder = submit conn gremlin mbinding
   where
     (g, binding_map) = runBinder binder
