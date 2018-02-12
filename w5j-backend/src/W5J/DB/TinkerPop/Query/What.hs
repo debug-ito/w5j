@@ -21,15 +21,14 @@ import Data.Greskell
     source, sV,
     newBind,
     unsafeFunCall, toGremlin, unsafeGreskell, unsafeWalk,
-    gOr, gHas2, gHas2P', pEq, gFilter, gOut, gHasId, gOrderBy, gHasLabel, gValues, gFold,
-    ByComparator(..), pjTraversal, Order, ComparatorA, Comparator(cReversed),
+    gOr, gHas2, gHas2P', pEq, gFilter, gOut, gHasId, gOrder, gHasLabel, gValues, gFold, gBy2,
+    ByComparator(..), Order, ComparatorA, Comparator(cReversed),
     Element(..), Vertex, AVertexProperty,
     string,
     ComparatorA
   )
 import Data.Monoid ((<>))
 import Data.Text (Text)
-import Data.Void (Void)
 
 import W5J.DB.TinkerPop.Parse (AVertexWhat, AVertexWhere, AVertexWhen)
 import W5J.DB.TinkerPop.Query.Common
@@ -74,7 +73,7 @@ data QCond = QCondTerm Text
            deriving (Show,Eq,Ord)
 
 
-buildQuery :: QueryWhat -> Binder (GTraversal Transform Void AVertexWhat)
+buildQuery :: QueryWhat -> Binder (GTraversal Transform () AVertexWhat)
 buildQuery query = do
   traversal <- buildQueryWith buildCond buildOrder query
   return $ liftWalk traversal $. gHasLabel "what" $. sV [] $ source "g"
@@ -101,9 +100,9 @@ buildQuery query = do
     buildCond (QCondWhenExists) = undefined -- TODO
     buildCond (QCondWhen _ _ _) = undefined -- TODO
     buildOrder order QOrderByWhen =
-      return $ gOrderBy [byWhen "when_from", byWhen "when_to", commonBy]
+      return $ gOrder [byWhen "when_from", byWhen "when_to", commonBy]
       where
-        byWhen edge_label = ByComp (pjTraversal $ getOptWhen edge_label) comparator
+        byWhen edge_label = gBy2 (getOptWhen edge_label) comparator
         getOptWhen edge_label = gOut [edge_label] >>> gFold >>> listToOptionalWalk
         comparator :: Greskell (ComparatorA (Maybe AVertexWhen))
         comparator = case order of
@@ -112,7 +111,7 @@ buildQuery query = do
         compareOptWhenVertices :: Greskell (ComparatorA (Maybe AVertexWhen))
         compareOptWhenVertices = unsafeGreskell "compareOptWhenVertices"
         commonBy =
-          ByComp (pjTraversal $ gValues ["updated_at"]) (orderComparator order)
+          gBy2 (gValues ["updated_at"]) (orderComparator order)
         listToOptionalWalk :: Walk Transform [a] (Maybe a)
         listToOptionalWalk = unsafeWalk "map" ["{ listToOptional(it.get()) }"]
       
