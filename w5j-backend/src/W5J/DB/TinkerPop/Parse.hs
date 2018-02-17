@@ -25,7 +25,7 @@ import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
 import Data.Greskell
-  ( AVertex(..), AVertexProperty(..), lookupOneValue, lookupListValues,
+  ( AVertex(..), AVertexProperty(..), parseOneValue, parseListValues,
     GraphSON(gsonValue), PropertyMapList,
     Element(..), Vertex
   )
@@ -69,10 +69,10 @@ instance FromJSON ACompleteWhat where
   parseJSON _ = empty
 
 parseVPOne :: FromJSON v => AVertex -> Text -> Parser v
-parseVPOne av key = (parseJSON . gsonValue) =<< (maybe empty pure $ lookupOneValue key $ avProperties av)
+parseVPOne av key = parseOneValue key $ avProperties av
 
 parseVPList :: FromJSON v => AVertex -> Text -> Parser [v]
-parseVPList av key = mapM parseJSON $ map gsonValue $ lookupListValues key $ avProperties av
+parseVPList av key = parseListValues key $ avProperties av
 
 -- | Aeson wrapper of 'What' vertex.
 newtype AVertexWhat = AVertexWhat { unAVertexWhat :: AWhat }
