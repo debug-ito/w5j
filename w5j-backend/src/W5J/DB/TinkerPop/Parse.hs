@@ -27,7 +27,8 @@ import Data.Foldable (toList)
 import Data.Greskell
   ( AVertex(..), AVertexProperty(..), parseOneValue, parseListValues,
     GraphSON(gsonValue), PropertyMapList,
-    Element(..), Vertex
+    Element(..), Vertex,
+    FromGraphSON(..), parseUnwrapAll
   )
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
@@ -68,28 +69,34 @@ instance FromJSON ACompleteWhat where
                                   }
   parseJSON _ = empty
 
-parseVPOne :: FromJSON v => AVertex -> Text -> Parser v
+instance FromGraphSON ACompleteWhat where
+  parseGraphSON = parseUnwrapAll
+
+parseVPOne :: FromGraphSON v => AVertex -> Text -> Parser v
 parseVPOne av key = parseOneValue key $ avProperties av
 
-parseVPList :: FromJSON v => AVertex -> Text -> Parser [v]
+parseVPList :: FromGraphSON v => AVertex -> Text -> Parser [v]
 parseVPList av key = parseListValues key $ avProperties av
 
 -- | Aeson wrapper of 'What' vertex.
 newtype AVertexWhat = AVertexWhat { unAVertexWhat :: AWhat }
 
+instance FromJSON AVertexWhat where
+  parseJSON v = parseGraphSON =<< parseJSON v
+
 -- | Parse a TinkerPop vertex object into 'What'. Since the input is
 -- only one vertex, 'whatWhen' and 'whatWheres' are empty.
-instance FromJSON AVertexWhat where
-  parseJSON v = fromAVertex =<< parseJSON v
+instance FromGraphSON AVertexWhat where
+  parseGraphSON v = fromAVertex =<< parseGraphSON v
     where
       fromAVertex av = do
         guard (avLabel av == "what")
-        let p1 :: FromJSON v => Text -> Parser v
+        let p1 :: FromGraphSON v => Text -> Parser v
             p1 = parseVPOne av
             ps = parseVPList av
         fmap AVertexWhat
           $ AWhat
-          <$> (parseJSON $ gsonValue $ avId av)
+          <$> (parseGraphSON $ avId av)
           <*> p1 "title"
           <*> pure Nothing
           <*> pure []
@@ -114,7 +121,10 @@ instance Element AVertexWhen where
 instance Vertex AVertexWhen
 
 instance FromJSON AVertexWhen where
-  parseJSON v = fromAVertex =<< parseJSON v
+  parseJSON v = parseGraphSON =<< parseJSON v
+
+instance FromGraphSON AVertexWhen where
+  parseGraphSON v = fromAVertex =<< parseGraphSON v
     where
       fromAVertex av = do
         guard (avLabel av == "when")
@@ -133,13 +143,16 @@ instance Element AVertexWhere where
 instance Vertex AVertexWhere
 
 instance FromJSON AVertexWhere where
-  parseJSON v = fromAVertex =<< parseJSON v
+  parseJSON v = parseGraphSON =<< parseJSON v
+
+instance FromGraphSON AVertexWhere where
+  parseGraphSON v = fromAVertex =<< parseGraphSON v
     where
       fromAVertex av = do
         guard (avLabel av == "where")
         fmap (AVertexWhere . AWhere)
           $ Where
-          <$> (fmap Just $ parseJSON $ gsonValue $ avId av)
+          <$> (fmap Just $ parseGraphSON $ avId av)
           <*> parseVPOne av "name"
 
 

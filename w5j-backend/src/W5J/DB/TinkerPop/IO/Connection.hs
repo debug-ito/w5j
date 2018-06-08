@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 -- |
 -- Module: W5J.DB.TinkerPop.IO.Connection
 -- Description: Connection and IO with the DB
@@ -6,22 +7,28 @@
 -- It wraps the gremlin-haskell package.
 module W5J.DB.TinkerPop.IO.Connection
        ( Connection,
-         Gremlin,
          Binding,
          withConnection,
          submit,
          submitBinder
        ) where
 
-import Data.Aeson (Value)
+import Control.Exception.Safe (bracket)
+import Data.Aeson (Value, Object)
 import qualified Data.HashMap.Strict as HM
 import Data.Greskell
   ( Binder, Greskell, runBinder, Binding, toGremlin,
     ToGreskell(..)
   )
+import Data.Greskell.AsIterator (AsIterator(IteratorItem))
+import Data.Greskell.GraphSON (FromGraphSON)
+import Data.Text (Text)
+import Network.Greskell.WebSocket.Client
+  ( Client, connect, close
+  )
+import qualified Network.Greskell.WebSocket.Client as WS
 
-import Database.TinkerPop.Types (Connection, Gremlin)
-import qualified Database.TinkerPop as TP
+type Connection = Client
 
 -- | Make a 'Connection' to the given server and run the given action.
 withConnection :: String
@@ -31,16 +38,17 @@ withConnection :: String
                -> (Connection -> IO ())
                -- ^ action
                -> IO ()
-withConnection = TP.run
+withConnection host port = bracket (connect host port) close
 
-submit :: Connection -> Gremlin -> Maybe Binding -> IO (Either String [Value])
-submit = TP.submit
+submit :: (ToGreskell g, a ~ GreskellReturn g, AsIterator a, e ~ IteratorItem a, FromGraphSON e)
+       => Connection -> g -> Maybe Binding -> IO [e]
+submit c g b = WS.slurpResults =<< WS.submit c g b
 
-submitBinder :: ToGreskell g => Connection -> Binder g -> IO (Either String [Value])
-submitBinder conn binder = submit conn gremlin mbinding
+submitBinder :: (ToGreskell g, a ~ GreskellReturn g, AsIterator a, e ~ IteratorItem a, FromGraphSON e)
+             => Connection -> Binder g -> IO [e]
+submitBinder conn binder = submit conn g mbinding
   where
     (g, binding_map) = runBinder binder
-    gremlin = toGremlin g
     mbinding = if HM.null binding_map
                then Nothing
                else Just binding_map

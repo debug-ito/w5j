@@ -30,11 +30,13 @@ module W5J.Aeson
 
 import Control.Applicative ((<$>), (<*>), empty)
 import Data.Aeson
-  ( ToJSON(..), FromJSON(..), object, (.:), Value(..),
+  ( ToJSON(..), FromJSON(..), object, Value(..),
     genericToEncoding, genericToJSON, genericParseJSON
   )
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonType
-import Data.Text (Text)
+import Data.Greskell.GraphSON (FromGraphSON(..), gValueBody, GValueBody(..), (.:), GValue, parseUnwrapAll)
+import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 
 import W5J.Interval (Interval, inf, sup, (...), mapInterval)
@@ -54,12 +56,16 @@ instance ToJSON a => ToJSON (AInterval a) where
                                     ("to", toJSON $ sup int)
                                   ]
 
+instance (FromJSON a, Ord a) => FromGraphSON (AInterval a) where
+  parseGraphSON v = case gValueBody v of
+    GObject o -> fmap AInterval
+                $ (...)
+                <$> (parseUnwrapAll =<< o .: "from")
+                <*> (parseUnwrapAll =<< o .: "to")
+    _ -> empty
+
 instance (FromJSON a, Ord a) => FromJSON (AInterval a) where
-  parseJSON (Object o) = fmap AInterval
-                         $ (...)
-                         <$> (o .: "from")
-                         <*> (o .: "to")
-  parseJSON _ = empty
+  parseJSON v = parseGraphSON =<< parseJSON v
 
 newtype ATimeInstant = ATimeInstant { unATimeInstant ::TimeInstant }
                      deriving (Eq,Ord,Show)
@@ -67,8 +73,11 @@ newtype ATimeInstant = ATimeInstant { unATimeInstant ::TimeInstant }
 instance ToJSON ATimeInstant where
   toJSON (ATimeInstant t) = toJSON $ toEpochMsec t
 
+instance FromGraphSON ATimeInstant where
+  parseGraphSON = fmap (ATimeInstant . fromEpochMsec) . parseGraphSON
+
 instance FromJSON ATimeInstant where
-  parseJSON = fmap (ATimeInstant . fromEpochMsec) . parseJSON
+  parseJSON v = parseGraphSON =<< parseJSON v
 
 
 newtype ATimeZone = ATimeZone { unATimeZone :: TimeZone }
@@ -77,8 +86,12 @@ newtype ATimeZone = ATimeZone { unATimeZone :: TimeZone }
 instance ToJSON ATimeZone where
   toJSON (ATimeZone tz) = toJSON $ tzToString tz
 
+instance FromGraphSON ATimeZone where
+  parseGraphSON v = (maybe empty (return . ATimeZone) . tzFromString . unpack) =<< parseGraphSON v
+
 instance FromJSON ATimeZone where
-  parseJSON v = (maybe empty (return . ATimeZone) . tzFromString) =<< parseJSON v
+  parseJSON v = parseGraphSON =<< parseJSON v
+
 
 aesonOpt :: AesonType.Options
 aesonOpt = AesonType.defaultOptions
@@ -120,7 +133,7 @@ instance ToJSON AWhere where
 
 instance FromJSON AWhere where
   parseJSON (Object o) = fmap AWhere
-                         $ Where <$> (o .: "where_id") <*> (o .: "name")
+                         $ Where <$> (o Aeson..: "where_id") <*> (o Aeson..: "name")
   parseJSON _ = empty
 
 toAWhere :: Where -> AWhere

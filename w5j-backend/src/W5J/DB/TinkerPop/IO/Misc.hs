@@ -17,6 +17,6 @@ import W5J.DB.TinkerPop.Error (toGremlinError)
 
 -- | Clear all vertices and edges.
 clearAll :: Connection -> IO ()
-clearAll conn = void $ toGremlinError =<< (submitBinder conn $ return $ trav)
+clearAll conn = void $ submitBinder conn $ return $ trav
   where
-    trav = gDrop $. liftWalk $ sV' [] $ source "g"
+    trav = void $ gDrop $. liftWalk $ sV' [] $ source "g"

@@ -17,12 +17,12 @@ import Control.Monad (mapM)
 import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>))
 import Data.Greskell
-  ( newBind,
+  ( newBind, Binder,
     unsafeWalk, unsafeGreskell,
     toGremlin,
     Walk, Transform,
     sV, source, ($.),
-    gHasLabel, toGreskell
+    gHasLabel, toGreskell, Greskell
   )
 
 import W5J.Aeson (toAWhat)
@@ -54,16 +54,17 @@ addWhat :: Connection
         -> IO (WhatID)
 addWhat conn what = do
   cur_time <- currentTime
-  parseResult =<< toGremlinError =<< (submitBinder conn $ getBinder $ setCurrentTime cur_time what)
+  parseResult =<< (submitBinder conn $ getBinder $ setCurrentTime cur_time what)
   where
     setCurrentTime t w = w { whatCreatedAt = t,
                              whatUpdatedAt = t
                            }
+    getBinder :: What -> Binder (Greskell WhatID)
     getBinder w = do
       p <- newBind $ toAWhat w
       return $ unsafeGreskell ("addWhat(" <> toGremlin p <> ").id()")
     parseResult [] = parseError "No element in the result."
-    parseResult (ret : _) = ioFromJSON ret
+    parseResult (ret : _) = return ret
     
 -- | Update an existing 'What' vertex specified by the 'whatId' field.
 updateWhat :: Connection
@@ -80,24 +81,20 @@ completeWhatStep = unsafeWalk "map" ["{ getCompleteWhat(it.get()) }"]
 
 -- | Get 'What' vertex with the given 'WhatID'.
 getWhatById :: Connection -> WhatID -> IO (Maybe What)
-getWhatById conn wid = do
-  mgot_val <- fmap (listToMaybe) $ toGremlinError =<< submitBinder conn binder
-  case mgot_val of
-   Nothing -> return Nothing
-   Just got_val -> fmap (Just . unACompleteWhat) $ ioFromJSON got_val
+getWhatById conn wid = fmap getResult $ submitBinder conn binder
   where
     binder = do
       v_wid <- newBind wid
-      return $ toGreskell $ completeWhatStep $. gHasLabel "what" $. sV [v_wid] $ source "g"
+      return $ completeWhatStep $. gHasLabel "what" $. sV [v_wid] $ source "g"
+    getResult = fmap unACompleteWhat . listToMaybe
 
 
 queryWhat :: Connection -> QueryWhat -> IO [What]
-queryWhat conn query =
-  fmap (map unACompleteWhat) $ mapM ioFromJSON =<< toGremlinError =<< submitBinder conn binder
+queryWhat conn query = fmap (map unACompleteWhat) $ submitBinder conn binder
   where
     binder = do
       query_gremlin <- buildQuery query
-      return $ toGreskell $ completeWhatStep $. query_gremlin
+      return $ completeWhatStep $. query_gremlin
 
 -- | Delete a 'What' vertex.
 deleteWhat :: Connection -> WhatID -> IO ()
