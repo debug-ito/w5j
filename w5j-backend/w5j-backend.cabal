@@ -45,7 +45,8 @@ library
                         greskell,
                         greskell-core,
                         greskell-websocket,
-                        safe-exceptions
+                        safe-exceptions,
+                        vector
 
 executable w5j-backend
   default-language:     Haskell2010

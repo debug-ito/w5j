@@ -28,13 +28,14 @@ import Data.Greskell
   ( AVertex(..), AVertexProperty(..), parseOneValue, parseListValues,
     GraphSON(gsonValue), PropertyMapList,
     Element(..), Vertex,
-    FromGraphSON(..), parseUnwrapAll, parseJSONViaGValue
+    FromGraphSON(..), parseJSONViaGValue
   )
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
-import Data.Maybe (listToMaybe)
 import Data.Monoid (mempty)
 import Data.Text (Text)
+import Data.Vector ((!), (!?))
+import qualified Data.Vector as V
 
 import W5J.Aeson
   ( AWhat(AWhat,_what_id), AWhen(AWhen), AWhere(AWhere),
@@ -51,26 +52,25 @@ import W5J.DB.TinkerPop.Error (parseError)
 newtype ACompleteWhat = ACompleteWhat { unACompleteWhat :: What }
 
 
+
 -- | Parse @[what_vertex, [when_from_vertices], [when_to_vertices], [where_vertices]]@
 -- into a complete 'What' data.
-instance FromJSON ACompleteWhat where
-  parseJSON (Array arr') = do
-    let arr = toList arr'
-    guard (length arr == 4)
-    let [what_v, when_from_vs, when_to_vs, where_vs] = arr
-        getMWhen = fmap (fmap fromAWhen . listToMaybe . map unAVertexWhen) . parseJSON
-    what <- fmap (fromAWhat . unAVertexWhat) $ parseJSON what_v
-    mwhen_from <- getMWhen when_from_vs
-    mwhen_to <- getMWhen when_to_vs
-    wheres <- fmap (map (fromAWhere . unAVertexWhere)) $ parseJSON where_vs
-    let mwhen_interval = (...) <$> mwhen_from <*> mwhen_to
-    return $ ACompleteWhat $ what { whatWhen = mwhen_interval,
-                                    whatWheres = wheres
-                                  }
-  parseJSON _ = empty
-
 instance FromGraphSON ACompleteWhat where
-  parseGraphSON = parseUnwrapAll
+  parseGraphSON v = fromV =<< parseGraphSON v
+    where
+      getMWhen = fmap (fromAWhen . unAVertexWhen) . (!? 0)
+      fromV vec = do
+        guard (V.length vec == 4)
+        what <- fmap (fromAWhat . unAVertexWhat) $ parseGraphSON (vec ! 0)
+        mwhen_from <- fmap getMWhen $ parseGraphSON (vec ! 1)
+        mwhen_to <- fmap getMWhen $ parseGraphSON (vec ! 2)
+        wheres <- fmap (map (fromAWhere . unAVertexWhere)) $ parseGraphSON (vec ! 3)
+        return $ ACompleteWhat $ what { whatWhen = (...) <$> mwhen_from <*> mwhen_to,
+                                        whatWheres = wheres
+                                      }
+
+instance FromJSON ACompleteWhat where
+  parseJSON = parseJSONViaGValue
 
 parseVPOne :: FromGraphSON v => AVertex -> Text -> Parser v
 parseVPOne av key = parseOneValue key $ avProperties av
