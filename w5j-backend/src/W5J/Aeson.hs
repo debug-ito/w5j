@@ -35,7 +35,10 @@ import Data.Aeson
   )
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonType
-import Data.Greskell.GraphSON (FromGraphSON(..), gValueBody, GValueBody(..), (.:), GValue, parseUnwrapAll)
+import Data.Greskell.GraphSON
+  ( FromGraphSON(..), (.:), GValue, parseUnwrapAll,
+    parseJSONViaGValue
+  )
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 
@@ -57,15 +60,15 @@ instance ToJSON a => ToJSON (AInterval a) where
                                   ]
 
 instance (FromJSON a, Ord a) => FromGraphSON (AInterval a) where
-  parseGraphSON v = case gValueBody v of
-    GObject o -> fmap AInterval
-                $ (...)
-                <$> (parseUnwrapAll =<< o .: "from")
-                <*> (parseUnwrapAll =<< o .: "to")
-    _ -> empty
+  parseGraphSON v = fromMap =<< parseGraphSON v
+    where
+      fromMap o = fmap AInterval
+                  $ (...)
+                  <$> (parseUnwrapAll =<< o .: "from")
+                  <*> (parseUnwrapAll =<< o .: "to")
 
 instance (FromJSON a, Ord a) => FromJSON (AInterval a) where
-  parseJSON v = parseGraphSON =<< parseJSON v
+  parseJSON = parseJSONViaGValue
 
 newtype ATimeInstant = ATimeInstant { unATimeInstant ::TimeInstant }
                      deriving (Eq,Ord,Show)
@@ -77,7 +80,7 @@ instance FromGraphSON ATimeInstant where
   parseGraphSON = fmap (ATimeInstant . fromEpochMsec) . parseGraphSON
 
 instance FromJSON ATimeInstant where
-  parseJSON v = parseGraphSON =<< parseJSON v
+  parseJSON = parseJSONViaGValue
 
 
 newtype ATimeZone = ATimeZone { unATimeZone :: TimeZone }
@@ -90,7 +93,7 @@ instance FromGraphSON ATimeZone where
   parseGraphSON v = (maybe empty (return . ATimeZone) . tzFromString . unpack) =<< parseGraphSON v
 
 instance FromJSON ATimeZone where
-  parseJSON v = parseGraphSON =<< parseJSON v
+  parseJSON = parseJSONViaGValue
 
 
 aesonOpt :: AesonType.Options

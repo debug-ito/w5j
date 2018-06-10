@@ -28,7 +28,7 @@ import Data.Greskell
   ( AVertex(..), AVertexProperty(..), parseOneValue, parseListValues,
     GraphSON(gsonValue), PropertyMapList,
     Element(..), Vertex,
-    FromGraphSON(..), parseUnwrapAll
+    FromGraphSON(..), parseUnwrapAll, parseJSONViaGValue
   )
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
@@ -82,7 +82,7 @@ parseVPList av key = parseListValues key $ avProperties av
 newtype AVertexWhat = AVertexWhat { unAVertexWhat :: AWhat }
 
 instance FromJSON AVertexWhat where
-  parseJSON v = parseGraphSON =<< parseJSON v
+  parseJSON = parseJSONViaGValue
 
 -- | Parse a TinkerPop vertex object into 'What'. Since the input is
 -- only one vertex, 'whatWhen' and 'whatWheres' are empty.
@@ -121,7 +121,7 @@ instance Element AVertexWhen where
 instance Vertex AVertexWhen
 
 instance FromJSON AVertexWhen where
-  parseJSON v = parseGraphSON =<< parseJSON v
+  parseJSON = parseJSONViaGValue
 
 instance FromGraphSON AVertexWhen where
   parseGraphSON v = fromAVertex =<< parseGraphSON v
@@ -143,7 +143,7 @@ instance Element AVertexWhere where
 instance Vertex AVertexWhere
 
 instance FromJSON AVertexWhere where
-  parseJSON v = parseGraphSON =<< parseJSON v
+  parseJSON = parseJSONViaGValue
 
 instance FromGraphSON AVertexWhere where
   parseGraphSON v = fromAVertex =<< parseGraphSON v
