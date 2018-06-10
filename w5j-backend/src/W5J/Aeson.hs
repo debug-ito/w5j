@@ -31,12 +31,13 @@ module W5J.Aeson
 import Control.Applicative ((<$>), (<*>), empty)
 import Data.Aeson
   ( ToJSON(..), FromJSON(..), object, Value(..),
-    genericToEncoding, genericToJSON, genericParseJSON
+    genericToEncoding, genericToJSON, genericParseJSON,
+    (.:)
   )
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonType
 import Data.Greskell.GraphSON
-  ( FromGraphSON(..), (.:), GValue, parseUnwrapAll,
+  ( FromGraphSON(..), GValue, parseUnwrapAll,
     parseJSONViaGValue
   )
 import Data.Text (Text, unpack)
@@ -58,17 +59,12 @@ instance ToJSON a => ToJSON (AInterval a) where
   toJSON (AInterval int) = object [ ("from", toJSON $ inf int),
                                     ("to", toJSON $ sup int)
                                   ]
-
-instance (FromJSON a, Ord a) => FromGraphSON (AInterval a) where
-  parseGraphSON v = fromMap =<< parseGraphSON v
-    where
-      fromMap o = fmap AInterval
-                  $ (...)
-                  <$> (parseUnwrapAll =<< o .: "from")
-                  <*> (parseUnwrapAll =<< o .: "to")
-
 instance (FromJSON a, Ord a) => FromJSON (AInterval a) where
-  parseJSON = parseJSONViaGValue
+  parseJSON (Object o) = fmap AInterval
+                         $ (...)
+                         <$> (o .: "from")
+                         <*> (o .: "to")
+  parseJSON _ = empty
 
 newtype ATimeInstant = ATimeInstant { unATimeInstant ::TimeInstant }
                      deriving (Eq,Ord,Show)
