@@ -15,6 +15,7 @@ module W5J.DB.TinkerPop.IO.Connection
 
 import Control.Exception.Safe (bracket)
 import Data.Aeson (Value, Object)
+import Data.Foldable (toList)
 import qualified Data.HashMap.Strict as HM
 import Data.Greskell
   ( Binder, Greskell, runBinder, Binding, toGremlin,
@@ -42,7 +43,7 @@ withConnection host port = bracket (connect host port) close
 
 submit :: (ToGreskell g, a ~ GreskellReturn g, AsIterator a, e ~ IteratorItem a, FromGraphSON e)
        => Connection -> g -> Maybe Binding -> IO [e]
-submit c g b = WS.slurpResults =<< WS.submit c g b
+submit c g b = fmap toList $ WS.slurpResults =<< WS.submit c g b
 
 submitBinder :: (ToGreskell g, a ~ GreskellReturn g, AsIterator a, e ~ IteratorItem a, FromGraphSON e)
              => Connection -> Binder g -> IO [e]
